@@ -28,6 +28,7 @@ library(modelsummary)
 library(rstanarm)
 library(splines)
 library(ggplot2)
+library(arrow)
 ```
 
 
@@ -74,79 +75,19 @@ Plot basic relationship
 #| warning: false
 #| message: false
 
-analysis_data <- 
-  read_csv(file = here::here("data/02-analysis_data/poll_analysis_data.csv"))
+# Read data
+trump_national_data <-
+  read_parquet(
+    file = here::here("data/02-analysis_data/trump_national_data.parquet")
+    )
+trump_state_data <-
+  read_parquet(
+    file = here::here("data/02-analysis_data/trump_state_data.parquet")
+    )
 
-just_trump_data <- 
-  analysis_data |> filter(candidate_name == "Donald Trump" | 
-                          candidate_name == "Donald Trump Jr.") |>
-  mutate(num_trump = round((pct / 100) * sample_size, 0))
 
-just_trump_data |>
-  ggplot(aes(x = sample_size, y = pct)) +
-  geom_point() +
-  geom_smooth() +
-  theme_classic() +
-  labs(y = "Trump percent", x = "Sample size")
 ```
 
-
-Color by pollster
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-# Color by pollster
-just_trump_data |>
-  ggplot(aes(x = sample_size, y = pct)) +
-  geom_point(aes(color = pollster)) +
-  geom_smooth() +
-  theme(legend.position = "bottom") +
-  labs(ylab = "Trump percent", xlab = "Sample size")
-```
-
-
-Facet by pollster
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-# Facet by pollster
-just_trump_data |>
-  ggplot(aes(x = sample_size, y = pct)) +
-  geom_point() +
-  geom_smooth() +
-  facet_wrap(vars(pollster)) +
-  theme_classic() +
-  labs(ylab = "Trump percent", xlab = "Sample size")
-```
-
-
-Color by transparency
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-# Facet by pollster
-just_trump_data |>
-  ggplot(aes(x = sample_size, y = pct)) +
-  geom_point(aes(color = factor(transparency_score))) +
-  geom_smooth() +
-  theme(legend.position = "bottom") +
-  labs(ylab = "Trump percent", xlab = "Sample size")
-```
 
 
 ## Predictor variables
@@ -174,6 +115,18 @@ $$y_i = \alpha + \beta_i x_{i1} + \gamma_i x_{i2}$$
 We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
 
 
+Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+
+\begin{align} 
+y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
+\mu_i &= \alpha + \beta_i + \gamma_i\\
+\alpha &\sim \mbox{Normal}(0, 2.5) \\
+\beta &\sim \mbox{Normal}(0, 2.5) \\
+\gamma &\sim \mbox{Normal}(0, 2.5) \\
+\sigma &\sim \mbox{Exponential}(1)
+\end{align}
+
+
 
 ### Model justification
 
@@ -192,11 +145,12 @@ Our results are summarized in @tbl-modelresults.
 #| warning: false
 #| message: false
 
-model_size <-
-  readRDS(file = here::here("models/trump_model_size.rds"))
 
-model_size_pollster <-
-  readRDS(file = here::here("models/trump_model_size_pollster.rds"))
+spline_model_national <-
+  readRDS(file = here::here("models/model_national.rds"))
+
+spline_model_state <-
+  readRDS(file = here::here("models/model_state.rds"))
 ```
 
 ```{r}
@@ -208,24 +162,156 @@ model_size_pollster <-
 
 modelsummary::modelsummary(
   list(
-    "Model 1" = model_size,
-    "Model 2" = model_size_pollster
+    "Model 1" = spline_model_national,
+    "Model 2" = spline_model_state
   ),
   fmt = 2
 )
 ```
 
 
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+Posterior predictive checks for national spline model:
 
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+pp_check(spline_model_national)
+```
+
+
+Posterior predictive checks for state spline model:
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+pp_check(spline_model_state)
+```
+
+
+Predict posterior draws and spline fit for votes nationally
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Predict and plot
+# Create new data for prediction
+new_data_national <- data.frame(
+  end_date_num = seq(
+    min(trump_national_data$end_date_num),
+    max(trump_national_data$end_date_num),
+    length.out = 100
+  )
+)
+
+# Predict posterior draws
+posterior_preds_national <- posterior_predict(spline_model_national, 
+                                     newdata = new_data_national)
+
+# Summarize predictions
+pred_summary_national <- new_data_national |>
+  mutate(
+    pred_mean = colMeans(posterior_preds_national),
+    pred_lower = apply(posterior_preds_national, 2, quantile, probs = 0.025),
+    pred_upper = apply(posterior_preds_national, 2, quantile, probs = 0.975)
+  )
+
+# Plot the spline fit
+ggplot(trump_national_data, aes(x = end_date_num, y = pct)) +
+  geom_point() +
+  geom_line(
+    data = pred_summary_national,
+    aes(x = end_date_num, y = pred_mean),
+    color = "blue",
+    inherit.aes = FALSE
+  ) +
+  geom_ribbon(
+    data = pred_summary_national,
+    aes(x = end_date_num, ymin = pred_lower, ymax = pred_upper),
+    alpha = 0.2,
+    inherit.aes = FALSE
+  ) +
+  labs(
+    x = "Number of Days Since Half a Year Before Election",
+    y = "Vote Percentage for Trump",
+    title = "Poll Percentage of Trump over Time with Spline Fit"
+  ) +
+  theme_minimal()
+```
+
+
+Predict posterior draws and spline fit for votes in each state
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+# Change 'pollster' and 'state' to factor variables
+trump_state_data <- trump_state_data |>
+  mutate(
+    pollster = factor(pollster),
+    state = factor(state)
+  )
+
+# Predict and plot
+# Create new data for prediction
+new_data_state <- expand.grid(
+  end_date_num = seq(
+    min(trump_state_data$end_date_num),
+    max(trump_state_data$end_date_num),
+    length.out = 100
+  ),
+  state = levels(trump_state_data$state)  # Include all states
+)
+
+# Predict posterior draws
+posterior_preds_state <- posterior_predict(spline_model_state, 
+                                              newdata = new_data_state)
+
+# Summarize predictions
+pred_summary_state <- new_data_state |>
+  mutate(
+    pred_mean = colMeans(posterior_preds_state),
+    pred_lower = apply(posterior_preds_state, 2, quantile, probs = 0.025),
+    pred_upper = apply(posterior_preds_state, 2, quantile, probs = 0.975)
+  )
+
+# Plot the spline fit
+ggplot(trump_state_data, aes(x = end_date_num, y = pct, color = state)) +
+  geom_point() +
+  geom_line(data = pred_summary_state, 
+            aes(x = end_date_num, y = pred_mean, group = state), 
+            color = "blue") +
+  labs(
+    x = "Number of Days Since Half a Year Before Election",
+    y = "Vote Percentage for Trump",
+    title = "Poll Percentage of Trump over Time with Spline Fit"
+  ) +
+  theme_minimal() +
+  facet_wrap(~ state, scales = "free_y") +  # Faceting by state
+  theme(
+    strip.text = element_text(size = 7), # Title size for each facet
+    axis.text = element_text(size = 5), # Axis text size
+    legend.text = element_text(size = 5),  # Adjust legend text size
+    legend.title = element_text(size = 5),  # Adjust legend title size
+    legend.key.size = unit(0.5, "cm"),  # Adjust size of legend keys
+    legend.position = "right"  # Position legend to the right
+  )
+```
 
 
 # Discussion
