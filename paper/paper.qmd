@@ -45,7 +45,11 @@ Results paragraph
 
 Why it matters paragraph
 
-The remainder of this paper is structured as follows. @sec-data introduces the overview of the data (@sec-data-overview), measurement (@sec-data-measure), as well as explanations of outcome (@sec-data-outcome) and predictor variables (@sec-data-predictor). @sec-model explains the modeling process in detail, including procedure of model set-up (@sec-model-set), model justification (@sec-model-justify) and model validation (@sec-model-validate). Then, @sec-result presents the prediction outcome, and @sec-discussion discusses the results and models. Appendix involves three parts: [Appendix -@sec-appx-pollster] presents methodology overview and evaluation of one certain pollster: Emerson; [Appendix -@sec-appx-survey] provides detailed idealized methodology and survey design for the poll; [Appendix -@sec-model-details] presents additional details during modeling process.
+The remainder of this paper is structured as follows:
+
+@sec-data introduces the overview of the data (@sec-data-overview), measurement (@sec-data-measure), as well as explanations of outcome (@sec-data-outcome) and predictor variables (@sec-data-predictor). @sec-model explains the modeling process in detail, including procedure of model set-up (@sec-model-set) and model justification (@sec-model-justify). Then, @sec-result presents the prediction outcome, and @sec-discussion discusses the results and models. 
+
+Appendix includes three parts: [Appendix -@sec-appx-pollster] presents methodology overview and evaluation of one certain pollster - Emerson; [Appendix -@sec-appx-survey] provides detailed idealized methodology and survey design for the poll; [Appendix -@sec-model-details] presents additional details during modeling process, including posterior predictive check [Appendix -@sec-ppc], comparison between posterior and prior distributions [Appendix -@sec-pvp], and diagnostics [Appendix -@sec-diagnostics].
 
 
 
@@ -119,11 +123,11 @@ Following sections define, explain and justify each model and the variables, as 
 Background details and diagnostics are included in [Appendix -@sec-model-details].
 
 
-## Model set-up {#sec-model-set}
+## Model Set-up {#sec-model-set}
 
 The Bayesian models were implemented using the R programming language [@citeR], specifically utilizing the `rstanarm` package of @citerstanarm. This package provides an interface for fitting Bayesian regression models using Stan, and the models are fit using the package.
 
-### Bayesian model with spline for vote percentage nationwide
+### Bayesian Model with Spline for Vote Percentage Nationwide
 
 Define $y_i$ as the percentage of the vote that candidate Donald Trump received in the poll for each observation $i$, which is the response variable. Then define $n_i$ as the number of days since May 5, 2024, i.e. half year before the election takes place.
 
@@ -159,7 +163,7 @@ Formula (5) defines the prior normal distributions for parameter $\gamma_k$, wit
 Formula (6) assigns a prior to the standard deviation $\sigma$, where 1 is the rate parameter of the exponential distribution. Using such prior for variance reflects the belief that smaller values are more likely but allows for larger variations if needed.
 
 
-### Bayesian model with spline for vote percentage and state as fixed effect
+### Bayesian Model with Spline for Vote Percentage and State as Fixed Effect
 
 Similarly as before, define $y_i$ as the percentage of the vote that candidate Donald Trump received in the poll for each observation $i$, which is the response variable. Then define $n_i$ as the number of days since May 5, 2024, i.e. half year before the election takes place.
 
@@ -195,7 +199,7 @@ Formula (5) defines the prior normal distributions for parameter $\gamma_k$, wit
 Formula (6) assigns a prior to the standard deviation $\sigma$, where 1 is the rate parameter of the exponential distribution. Using such prior for variance reflects the belief that smaller values are more likely but allows for larger variations if needed.
 
 
-### Assumptions of the Bayesian models
+### Assumptions of the Bayesian Models
 
 Underlying assumptions for two Bayesian models are discussed below:
 
@@ -220,7 +224,7 @@ The relationship between the response variable and the predictor variable is ass
 The prior distributions for the parameters (i.e. intercept and coefficients) are assumed specified based on prior beliefs about their likely values. The choice of priors can influence the posterior estimates, reflecting reasonable beliefs about the parameters.
 
 
-## Model justification {#sec-model-justify}
+## Model Justification {#sec-model-justify}
 
 The Bayesian model with natural splines for predicting election outcomes with respect to the date is the most appropriate model because of several reasons. Firstly, the electoral dynamics for vote percentage could be highly complex and therefore non-linear. Various factors occurring before the election date could largely affect the outcomes. By employing natural splines, the model allows for the flexibility to capture these non-linear trends, presenting how support for a candidate evolves as the election date approaches, thus providing predictions about vote percentage.
 
@@ -233,17 +237,12 @@ Another option was to use a generalized linear model (GLM). While GLMs can handl
 After setting up the Bayesian model with splines, we expect a positive relationship between the percentage vote of Donald Trump and time passed since half year before the election. In other words, we anticipate that as the election date approaches, Donald Trump's support would increase. This expectation arises from the increasing support from minority voters, particularly from black voters [@nypostblack]. Also, all seven battleground states (Pennsylvania, Wisconsin, Michigan, Arizona, Nevada, Georgia, North Carolina) are expected to shift to support Trump [@nypoststate]. The vice-presidential debates that took place could be the major reason, which explain Trump’s appeal of ‘Unabashed machismo vibe’, motivating especially young voters to support him [@nypostyoung]. 
 
 
-## Model Validation {#sec-model-validate}
 
-During the modeling process, posterior predictive checks (PPC) is used. PPC is the comparison between what the fitted model predicts and the actual observed data, which validates whether the fitted model is compatible with the observed data. The aim is to detect if the model is inadequate to describe the data [@ppcheck].
+# Results {#sec-result}
 
-In the PPC plots, the x-axis represents the values of the response variable (in this case, the vote percentage of Donald Trump), and the y-axis represents the density or probability of those values. 
+## Overview
 
-The dark black line presents the density of the observed data ($y$), which is a smoothed estimate of the distribution of actual concentrated data points. On the other hand, the light blue lines present the density of the replicated data ($y_{rep}$), which is generated from the posterior predictive distribution of the model.
-
-Whether the black line matches well with the blue lines indicates how well the model fits the observed data. If the black line aligns well with the blue lines, it suggests that the model is performing well in capturing the actual data distribution, and vice versa. 
-
-@fig-model1ppcheck shows the posterior predictive checks for the first model, which predicts Trump's percentage vote over time in the national perspective. 
+The results from two Bayesian models are summarized in @tbl-modelresults.
 
 ```{r}
 #| echo: false
@@ -258,46 +257,6 @@ spline_model_national <-
 spline_model_state <-
   readRDS(file = here::here("models/model_state.rds"))
 ```
-
-```{r}
-#| echo: false
-#| eval: true
-#| label: fig-model1ppcheck
-#| fig-cap: "Posterior predictive checks for model 1 (national)"
-#| warning: false
-
-pp_check(spline_model_national)
-```
-
-
-In @fig-model1ppcheck, the black line basically follows the trend of the light blue lines, indicating the observed data consistently falling within the range of simulated data. This suggests that the model provides a good fit, effectively predicting the actual trend of the data.
-
-Similarly, @fig-model2ppcheck shows the posterior predictive checks for the second model, which predicts Trump's percentage vote over time by state.
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| label: fig-model2ppcheck
-#| fig-cap: "Posterior predictive checks for model 2 (by state)"
-#| warning: false
-
-pp_check(spline_model_state)
-```
-
-
-In @fig-model2ppcheck, Although the black line has minor deviation away from the light blue lines, and a part of the black line falls outside the range of simulated lines, the majority part of the black line matches with the light blue lines. 
-
-This suggests that the model basically provides a good fit, effectively predicting the actual trend of the data. But the fit is not that well compared to model 1, since there is a larger deviation in this plot than the previous PPC plot for model 1.
-
-
-
-# Results {#sec-result}
-
-## Overview
-
-The results from two Bayesian models are summarized in @tbl-modelresults.
-
 
 ```{r}
 #| echo: false
@@ -320,7 +279,7 @@ modelsummary::modelsummary(
 Model 2 additionally discusses state effects, including coefficients for each state respectively. FOr instance, state Massachusetts has the smallest, negative coefficient (-15.02), indicating that the response variable of vote percentage is significantly lower in California compared to the reference state. On the other hand, state South Dakota has the largest, positive coefficient (9.12), indicating a relatively higher response for the state. 
 
 
-## Predictions and spline fit for vote percentage nationally
+## Prediction and Spline Fit for Vote Percentage Nationwide
 
 @fig-model1results demonstrates the results of the first Bayesian model, including predictions and spline fit for vote percentage of Donald Trump in the perspective of the whole nation.
 
@@ -380,7 +339,7 @@ ggplot(trump_national_data, aes(x = end_date_num, y = pct)) +
 The blue line drawn through the scatter points in @fig-model1results indicates an upward trend in the data. It represents that as the time approaches the election (i.e. more day passed since half year before election), Trump's vote percentage is expected to be higher. Though the intercept is below 45%, indicating that half year ago Trump's support was lower than Harris, the percentage vote has climbed to nearly 50% with a steady trend over time. The black spots on the graph are individual observations, and the shaded gray area represents the confidence interval for the predicted values. 
 
 
-## Prediction and spline fit for vote percentage by state
+## Prediction and Spline Fit for Vote Percentage by State
 
 @fig-model2results demonstrates the results of the second Bayesian model, including predictions and spline fit for vote percentage of Donald Trump in each state respectively.
 
@@ -451,15 +410,38 @@ ggplot(trump_state_data, aes(x = end_date_num, y = pct, color = state)) +
 
 # Discussion {#sec-discussion}
 
-## First discussion point {#sec-first-point}
+## Overview of the Paper {#sec-first-point}
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+This paper presented a analysis using Bayesian modeling to predict the outcome of the 2024 U.S. Presidential Election. This paper employed the "poll-of-polls" approach to make predictions, which aggregated multiple polls to minimize biases and enhance prediction accuracy.
 
-## Second discussion point
+The voting percentage of Donald Trump is the main response variable, and the number of days since half year before the election "end_date_num" and the regional location "state" are the predictors. 
 
-Please don't use these as sub-heading labels - change them to be what your point actually is.
+Two distinct Bayesian models were constructed: one that utilized nationwide data, and another that incorporated state-specific effects. The relationship between the response and predictor variables were captured by non-linear natural splines, providing trends of how vote percentage changes as time approaches the election date.  
 
-## Third discussion point
+The Bayesian model with natural splines was chosen for analysis because it is appropriate for capturing complex electoral dynamics, allowing for flexibility, evaluating the trend across time, thus providing predictions about the election outcome.
+
+The results investigated by the paper basically met our anticipation. As time approaches the election date, the predicted support for Trump increased stably, increasing from 45% half year ago to nearly 50% recently. Specifically speaking from state perspective, steady increase trend still persists in predictions of supports from people in different states, and several states have high vote percentage lead.
+
+In conclusion, we predict that the voting and support inclination will continue to favor Donald Trump until the day of the election.
+
+
+## Fluid Nature of Voter Intensions
+
+What we learned from this study is the understanding of how temporal dynamics influence voter preferences in electoral contexts. 
+
+Besides providing predictions about the upcoming 2024 election, the upward sloping trend in vote percentage for Donald Trump with respect to days passed since half year ago found by the paper suggests that voters are highly responsive to the political incidence. As mentioned before, frequent presidential debates, promises made by politicians at the last minute, or a sudden outbreak of an event would incite more people to vote for candidate, or change their mind and switch to support the other. 
+
+This finding underscores the fluid nature of voter intentions, and the critical role of time in shaping electoral outcomes. For political strategists, the paper emphasizes the importance of imposing more provocative measures as the election date is nearer. For voters, this paper could help them understand the dynamic flow of political elections clearly, and help to maintain distinct, calm overview during election activities.
+
+
+## State as an Important Factor
+
+Moreover, the second Bayesian model in the paper included state as a fixed effect, providing information on not only the electoral behaviors of the voters from a broad national perspective, but also on the regional variations in support trends. 
+
+By considering locational issues, the predictions and analysis about the vote tendency with respect to time could be conducted more completely, and enable people to view the reasons behind the formation of such preferences from the perspective of regional differences. For instance, the model identifies states like South Dakota, where Trump’s support is relatively high, versus states like Massachusetts, which shows a comparatively low, negative coefficient.
+
+The study reveals the disparities in voter support across different locations, reinforcing the idea that a "one-size-fits-all" approach to campaigning is highly inadequate. The finding encourages politicians to encourage politicians to "suit the remedy to the case", and choose different political strategies and means based on the preferences and beliefs of people in various regions respectively, in order to gain the trust and support of voters.
+
 
 ## Weaknesses
 
@@ -478,13 +460,22 @@ Some data included to make predictions nationwide using the first Bayesian model
 If the assumptions and priors of the models are violated, situations where the models may not be appropriate could occur. For instance, if the population of the response variable (pct) exhibits a skewed distribution instead of the normal distribution assumed, the models would be inappropriate and provide biased results.
 
 
+## More to Be Done
+
+Though applying complete statistical modeling and analysis, this study only provided predictions about the election outcome, and trends of vote support to one certain candidate over time. Further researches and investigations are essential to refine the predictive modeling included in this paper. 
+
+Firstly, more models could be considered to be used in the predicting procedure. One model type may seem to be too simple and have too many assumptions and limitations, making it difficult to provide an overview of such electoral context. More model validation and sensitivity analyses could be done to improve the modeling process, so that the robustness of the models against different assumptions and priors could be assessed to make the model more fit. 
+
+Secondly, data collection methodologies could be improved as well. In this study only one raw dataset was used, arising potential issues in true representativeness of the polling data. Finding and using more data would lead to more accurate and relaible predictions in future electoral analysis.
+
+Last but not least, evaluations on the possible reasons behind the trends of the vote percentage could be investigated. Specifically, since the second Bayesian model included in this paper considered state as a fixed effect, further researches could analysis why such regional variations exist. Is this because people in each region have their own unique sets of values and beliefs, or is it because people in a certain region have experienced the same events? Future studies could explore the integration of additional predictors, and consider various factors such as socio-economic reasons, historical issues, and ethic identity.
+
 
 \newpage
 
 \appendix
 
 # Appendix {-}
-
 
 # Pollster methodology overview and evaluation: Emerson {#sec-appx-pollster}
 
@@ -892,57 +883,120 @@ Limitations include potential sampling and non-response bias, as underrepresente
 
 # Additional Model details {#sec-model-details}
 
-## Posterior predictive check
+## Posterior Predictive Check {#sec-ppc}
 
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
+During the modeling process, posterior predictive checks (PPC) is used.
 
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+PPC is the comparison between what the fitted model predicts and the actual observed data, which validates whether the fitted model is compatible with the observed data. The aim is to detect if the model is inadequate to describe the data [@ppcheck].
+
+In the PPC plots, the x-axis represents the values of the response variable (in this case, the vote percentage of Donald Trump), and the y-axis represents the density or probability of those values. 
+
+The dark black line presents the density of the observed data ($y$), which is a smoothed estimate of the distribution of actual concentrated data points. On the other hand, the light blue lines present the density of the replicated data ($y_{rep}$), which is generated from the posterior predictive distribution of the model.
+
+Whether the black line matches well with the blue lines indicates how well the model fits the observed data. If the black line aligns well with the blue lines, it suggests that the model is performing well in capturing the actual data distribution, and vice versa. 
+
+@fig-ppcheck shows the posterior predictive checks for both Bayesian models.
 
 ```{r}
 #| eval: true
 #| echo: false
 #| message: false
 #| warning: false
-#| label: fig-ppcheckandposteriorvsprior
+#| label: fig-ppcheck
 #| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
+#| fig-cap: "Posterior Predictive Check of Two Bayesian Models"
+#| fig-subcap: ["Posterior Predictive Check of Bayesian Model 1 (National)", "Posterior Predictive Check of Bayesian Model 2 (by State)"]
 
-#pp_check(first_model) +
-#  theme_classic() +
-#  theme(legend.position = "bottom")
+pp_check(spline_model_national)
 
-#posterior_vs_prior(first_model) +
-#  theme_minimal() +
-#  scale_color_brewer(palette = "Set1") +
-#  theme(legend.position = "bottom") +
-#  coord_flip()
+pp_check(spline_model_state)
 ```
 
-## Diagnostics
+In @fig-ppcheck-1, the black line basically follows the trend of the light blue lines, indicating the observed data consistently falling within the range of simulated data. This suggests that the model provides a good fit, effectively predicting the actual trend of the data.
 
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
+Similarly, @fig-ppcheck-2 shows the posterior predictive checks for the second model, which predicts Trump's percentage vote over time by state. Although the black line has minor deviation away from the light blue lines, and a part of the black line falls outside the range of simulated lines, the majority part of the black line matches with the light blue lines. 
 
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
+This suggests that the model basically provides a good fit, effectively predicting the actual trend of the data. But the fit is not that well compared to model 1, since there is a larger deviation in this plot than the previous PPC plot for model 1.
+
+
+## Posterior vs. Prior {#sec-pvp}
+
+Comparing the posterior with the prior is also necessary for model validation. It examines how the model fits and is affected by the data.
+
+Prior distribution represents the beliefs about the parameter values before observing any data, which is constructed by our initial assumptions. Posterior distribution reflects updated beliefs about the parameters after observing the data.
+
+In the plot, the posterior distribution is demonstrated on the left side, and the prior distribution is on the right side. Each colored dot on the graph represents a parameter, and the horizontal line indicates the uncertainty.
+
+By comparing the posterior with the prior, whether data has a significant impact on the parameter estimates and whether the model is well-fit could be validated.
+
+@fig-model1-posteriorvsprior shows the posterior vs. prior plot for the Bayesian model in the national perspective. We can see that in the posterior distribution, parameters have a smaller spread compared to the prior, indicating less uncertainty. There are also some differences between the prior and posterior distributions, suggesting that the model is well-fit and captures certain patterns in the data.
 
 ```{r}
 #| echo: false
 #| eval: true
+#| label: fig-model1-posteriorvsprior
+#| fig-cap: "Posterior vs Prior Plot for Model 1 (National)"
+#| warning: false
+
+posterior_vs_prior(spline_model_national) +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set1") +
+  theme(legend.position = "bottom") +
+  coord_flip()
+```
+
+
+
+## Diagnostics {#sec-diagnostics}
+
+### R-hat Plots
+
+$\hat{R}$ is a diagnostic measure that compares the variance within each chain to the variance between chains. 
+
+R-hat plot shows the values of the $\hat{R}$ statistic on the x-axis, which is a measure of convergence for Markov Chain Monte Carlo (MCMC) simulations in Bayesian analysis, and shows different parameters or chains on the y-axis. 
+
+The plot categorizes the parameters based on their $\hat{R}$ values. It is a crucial diagnostic tool in assessing the validity of the model. If most parameter have values $\hat{R} \leq 1.05$, the parameters have good convergence. This indicates that these parameters have likely reached their stationary distribution, and the chains have converged to similar distribution, suggesting that the sampling process has mixed well.
+
+@fig-rhat-1 and @fig-rhat-2 presents R-hat plots for the two Bayesian models constructed in the paper respectively. Both plots show that all parameters in two models have values $\hat{R} < 1.05$ and around 1, indicating good convergence and a well-fitted model.
+
+```{r}
+#| eval: true
+#| echo: false
 #| message: false
 #| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
+#| label: fig-rhat
 #| layout-ncol: 2
+#| fig-cap: "R-hat Plots of Two Bayesian Models"
+#| fig-subcap: ["R-hat Plot of Bayesian Model 1 (National)", "R-hat Plot of Bayesian Model 2 (by State)"]
 
-#plot(first_model, "trace")
+plot(spline_model_national, "rhat")
 
-#plot(first_model, "rhat")
+plot(spline_model_state, "rhat")
+```
+
+
+### Trace Plots
+
+Trace plot shows samples from all the chains. Each chain is represented by a different color or line style.
+
+If all chains appear to mix well and oscillate around the same mean, and overlap significantly, it suggests that the parameter estimates are stable. 
+
+@fig-model1-trace presents a trace plot for the Bayesian model which is in the national perspective. We can see that there is no clear separation between the chains, suggesting that there is lack of convergence issue and well-fit model. However, relatively large fluctuations in the plot indicate some uncertainty, and less effective and precise outcome. This could be probably fixed by adding more data into the modeling procedure.
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-model1-trace
+#| fig-cap: "Trace Plot for Model 1 (National)"
+#| warning: false
+
+plot(spline_model_national, "trace")
 ```
 
 
 
 \newpage
+
 
 
 # References
