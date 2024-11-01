@@ -1,8 +1,8 @@
-# 2024 U.S. Presidential Election Outcome Forecast Using Linear Modeling
+# 2024 U.S. Presidential Election Outcome Forecast Using Bayesian Modeling
 
 ## Overview
 
-This study aims to forecast the outcome of the 2024 U.S. Presidential Election using aggregated polling data and a linear modeling approach. The study also includes an analysis of a selected pollster’s methodology and an idealized survey design for forecasting elections within a limited budget.
+This study aims to forecast the outcome of the 2024 U.S. Presidential Election using aggregated polling data and a Bayesian modeling approach. The study also includes an analysis of a selected pollster’s methodology and an idealized survey design for forecasting elections within a limited budget.
 
 
 ## File Structure
@@ -19,4 +19,4 @@ The repo is structured as:
 
 ## Statement on LLM usage
 
-Entire chat history is available in inputs/llms/usage.txt.
+ChatGPT 4o mini was used to provide assistance on resolving issues occurring in the process of constructing models, and on interpreting and evaluating models. Entire chat history is available in `other/llms/usage.txt`.
