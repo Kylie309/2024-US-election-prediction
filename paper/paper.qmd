@@ -1,6 +1,6 @@
 ---
-title: "Prediction about 2024 U.S. Presidential Election Outcome Using Linear Modeling"
-subtitle: "My subtitle if needed"
+title: "Prediction about 2024 U.S. Presidential Election Outcome Using Bayesian Modeling"
+subtitle: "Vote Percentage of Donald Trump over Time"
 author: 
   - Yunkai Gu
   - Anqi Xu
@@ -8,7 +8,7 @@ author:
 thanks: "Code and data are available at: [https://github.com/Kylie309/2024-US-election-prediction](https://github.com/Kylie309/2024-US-election-prediction)."
 date: today
 date-format: long
-abstract: "This study aims to forecast the outcome of the 2024 U.S. Presidential Election using aggregated polling data and a linear modeling approach. The study also includes an analysis of a selected pollster’s methodology and an idealized survey design for forecasting elections within a limited budget."
+abstract: "This study aims to forecast the outcome of the 2024 U.S. Presidential Election using aggregated polling data and a Bayesian modeling approach. The study also includes an analysis of a selected pollster’s methodology and an idealized survey design for forecasting elections within a limited budget."
 format: pdf
 toc: true
 number-sections: true
@@ -35,7 +35,7 @@ library(arrow)
 # Introduction
 
 The U.S. presidential election is a critical event that attracts substantial public and media interest. Various tools and methodologies have then been used for making predictions about the final electoral outcome.  
-Curious about the election outcome as well, this paper employs the "poll-of-polls" approach to make predictions, which aggregates multiple polls to minimize biases and enhance prediction accuracy. A linear model is built to forecast the winner of the 2024 U.S. Presidential Election. In addition, in-depth analysis on certain pollster's methodology is also included, discussing their sampling approach, strengths, and weaknesses.
+Curious about the election outcome as well, this paper employs the "poll-of-polls" approach to make predictions, which aggregates multiple polls to minimize biases and enhance prediction accuracy. Two Bayesian models are built to forecast the winner of the 2024 U.S. Presidential Election. In addition, in-depth analysis on certain pollster's methodology is also included, discussing their sampling approach, strengths, and weaknesses.
 
 Overview paragraph
 
@@ -45,23 +45,25 @@ Results paragraph
 
 Why it matters paragraph
 
-Telegraphing paragraph: The remainder of this paper is structured as follows. @sec-data....
+The remainder of this paper is structured as follows. @sec-data introduces the overview of the data (@sec-data-overview), measurement (@sec-data-measure), as well as explanations of outcome (@sec-data-outcome) and predictor variables (@sec-data-predictor). @sec-model explains the modeling process in detail, including procedure of model set-up (@sec-model-set), model justification (@sec-model-justify) and model validation (@sec-model-validate). Then, @sec-result presents the prediction outcome, and @sec-discussion discusses the results and models. Appendix involves three parts: [Appendix -@sec-appx-pollster] presents methodology overview and evaluation of one certain pollster: Emerson; [Appendix -@sec-appx-survey] provides detailed idealized methodology and survey design for the poll; [Appendix -@sec-model-details] presents additional details during modeling process.
 
 
 
 # Data {#sec-data}
 
-## Overview
+## Overview {#sec-data-overview}
 
-We use the statistical programming language R [@citeR].... Our data [@shelter].... Following @tellingstories, we consider...
+The analysis uses the dataset of national presidential general polls from FiveThirtyEight [@fivethirtyeight]. Following @tellingstories, we consider to make predictions about the election outcome based on the data.
 
-Overview text
+The analyses presented in this paper were conducted using R programming language [@citeR]. The `tidyverse` packages [@citetidyverse] were used in the process of data simulation, testing beforehand. After the original raw data was downloaded by using `tidyverse` package [@citetidyverse], data cleaning process was done by using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], and `arrow` package [@citearrow]. Then, models were constructed using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], `rstanarm` [@citerstanarm] package, and `splines` package [@citesplines]. The model results are then presented by `modelsummary` [@citemodelsummary] package, and graphs were made with `ggplot2` package [@citeggplot].
 
-## Measurement
+
+
+## Measurement {#sec-data-measure}
 	
 Some paragraphs about how we go from a phenomena in the world to an entry in the dataset.
 
-## Outcome variables
+## Outcome variables {#sec-data-outcome}
 
 Add graphs, tables and text. Use sub-sub-headings for each outcome variable or update the subheading to be singular.
 
@@ -84,13 +86,11 @@ trump_state_data <-
   read_parquet(
     file = here::here("data/02-analysis_data/trump_state_data.parquet")
     )
-
-
 ```
 
 
 
-## Predictor variables
+## Predictor variables {#sec-data-predictor}
 
 Add graphs, tables and text.
 
@@ -98,46 +98,152 @@ Use sub-sub-headings for each outcome variable and feel free to combine a few in
 
 
 
-# Model
+# Model {#sec-model}
 
-The goal of our modelling strategy is twofold. Firstly,...
+The models constructed in the paper are Bayesian linear regression models designed to predict the percentage of support for candidate Donald Trump (referred to as pct) based on the number of days since May 5, 2024, i.e. half year before the election takes place (referred to as end_date_num).
 
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
+Two Bayesian models are constructed separately. 
+
+Firstly, a Bayesian model with spline using response variable as the percentage of support (pct) and predictor variable as the number of days (end_date_num) is constructed to make predictions for vote percentage for Trump nationwide.
+
+Then, a similar Bayesian model with the same response and predictor variables, but with an additional predictor "state", which contains information of the state in which the polling occurred, is constructed to include "state" as a fixed effect in the model with spline. 
+
+The goal of our modeling strategy is twofold. 
+
+Firstly, we aim to understand the overall trend in the percentage of support for Trump over time from a national perspective. This is accomplished through the first Bayesian model, which uses the number of days (end_date_num) as the sole predictor. This model allows us to investigate how support changes as we approach the election, providing insights into temporal dynamics in voter preferences nationwide.
+
+Secondly, we seek to explore the impact of state-level differences on voter support through the second Bayesian model, which incorporates state as an additional predictor alongside the number of days. By treating state as a categorical predictor variable, this model enables us to assess how the percentage of support varies across different states overtime. This approach helps to understand regional influences on voter behavior, potentially uncovering important variations that the first model may overlook.
+
+Following sections define, explain and justify each model and the variables, as well as discuss underlying assumptions, potential limitations, software used to implement the model, and evidence of model validation and checking.
+
+Background details and diagnostics are included in [Appendix -@sec-model-details].
 
 
-## Model set-up
+## Model set-up {#sec-model-set}
 
+The Bayesian models were implemented using the R programming language [@citeR], specifically utilizing the `rstanarm` package of @citerstanarm. This package provides an interface for fitting Bayesian regression models using Stan, and the models are fit using the package.
 
-Define $y_i$ as the percentage vote for Trump. Then $x_{i1}$ is the sample size and $x_{i2}$ is the pollster. 
+### Bayesian model with spline for vote percentage nationwide
 
-$$y_i = \alpha + \beta_i x_{i1} + \gamma_i x_{i2}$$
+Define $y_i$ as the percentage of the vote that candidate Donald Trump received in the poll for each observation $i$, which is the response variable. Then define $n_i$ as the number of days since May 5, 2024, i.e. half year before the election takes place.
 
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
-
-
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+The Bayesian model could be defined by the following mathematical expressions:
 
 \begin{align} 
 y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
+\mu_i &= \alpha + f(n_i)\\
+f(n_i) &= \sum_{k=1}^{K} \gamma_k B_k(n_i)\\
+\alpha &\sim \mbox{Normal}(50, 10^2)\\
+\gamma_k &\sim \mbox{Normal}(0, 5^2) \quad \text{for } k = 1, 2, \ldots, K\\
 \sigma &\sim \mbox{Exponential}(1)
 \end{align}
 
+Combining all the components, the complete model can be expressed as:
+
+$$y_i \sim \mbox{Normal}\left(\beta_0 + \sum_{k=1}^{4} \gamma_k B_k(n_i), \sigma^2\right)$$
+
+This Bayesian model involves the vote percentage of Trump ($y_i$, pct) as a function of the number of days since half year before the election ($n_i$, end_date_num), modeled using natural splines.
+
+Formula (1) specifies that the response variable $y_i$ is normally distributed, where $\mu_i$ is the predicted mean percentage of support for the i-th observation, and $\sigma$ is the standard deviation of the normal distribution, representing the variability in the observed support percentages.
+
+Formula (2) specifies that the mean $\mu_i$ is modeled as a linear combination of an intercept $\alpha$ and a function of $n_i$, represented by natural spline $f$. The intercept of $\alpha$ represents the expected support when all predictors are zero.
+
+Formula (3) specifies that a natural spline function $f$ is applied to variable $n_i$, which represents the non-linear effect of time, and allows the model to flexibly fit the relationship between time and support. In this function, $K$ is the number of basis functions, $B_k(n_i)$ are the basis functions of natural spline, and $\gamma_k$ are the coefficients for these basis function.
+
+Then, formula (4), (5) and (6) presents the priors:
+
+Formula (4) defines the prior normal distributions for intercept $\alpha$, with mean equals $50$ and variance equals $10^2$. This prior for intercept suggests that the average vote percentage is expected to be around 50% with some uncertainty.
+
+Formula (5) defines the prior normal distributions for parameter $\gamma_k$, with mean equals $0$ and variance equals $5^2$. This prior for splines indicates prior belief that the effects of number of days ($n_i$, end_data_num) are likely to be small but allowing for flexibility.
+
+Formula (6) assigns a prior to the standard deviation $\sigma$, where 1 is the rate parameter of the exponential distribution. Using such prior for variance reflects the belief that smaller values are more likely but allows for larger variations if needed.
 
 
-### Model justification
+### Bayesian model with spline for vote percentage and state as fixed effect
 
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
+Similarly as before, define $y_i$ as the percentage of the vote that candidate Donald Trump received in the poll for each observation $i$, which is the response variable. Then define $n_i$ as the number of days since May 5, 2024, i.e. half year before the election takes place.
 
-We can use maths by including latex between dollar signs, for instance $\theta$.
+The Bayesian model could be defined by the following mathematical expressions:
+
+\begin{align} 
+y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
+\mu_i &= \alpha + f(n_i) + \beta_{\text{state}} \cdot \text{state}_i\\
+f(n_i) &= \sum_{k=1}^{K} \gamma_k B_k(n_i)\\
+\alpha &\sim \mbox{Normal}(50, 10^2)\\
+\gamma_k &\sim \mbox{Normal}(0, 5^2) \quad \text{for } k = 1, 2, \ldots, K\\
+\sigma &\sim \mbox{Exponential}(1)
+\end{align}
+
+Combining all the components, the complete model can be expressed as:
+
+$$y_i \sim \mbox{Normal}\left(\beta_0 + \sum_{k=1}^{4} \gamma_k B_k(n_i) + + \beta_{\text{state}} \cdot \text{state}_i, \sigma^2\right)$$
+
+This Bayesian model involves the vote percentage of Trump ($y_i$, pct) as a function of the number of days since half year before the election ($n_i$, end_date_num), modeled using natural splines. The mean is modeled as a linear combination of an intercept, a natural spline function of $n_i$, and a fixed effect for the state. 
+
+Formula (1) specifies that the response variable $y_i$ is normally distributed, where $\mu_i$ is the predicted mean percentage of support for the i-th observation, and $\sigma$ is the standard deviation of the normal distribution, representing the variability in the observed support percentages.
+
+Formula (2) specifies the mean structure. The linear combination is composed of three parts: a parameter $\alpha$; a function $f(n_i)$ which represents the non-linear effect of the predictor $n_i$, modeled using natural splines; and the coefficient $\beta_{\text{state}}$ for the categorical variable state, which captures the average difference in percentage across the different states. Treating state effects as levels (or random effects) may also include weakly informative priors to avoid overfitting and encourage regularization.
+
+Formula (3) specifies that a natural spline function $f$ is applied to variable $n_i$, which represents the non-linear effect of time, and allows the model to flexibly fit the relationship between time and support. In this function, $K$ is the number of basis functions, $B_k(n_i)$ are the basis functions of natural spline, and $\gamma_k$ are the coefficients for these basis function.
+
+Then, formula (4), (5) and (6) presents the priors:
+
+Formula (4) defines the prior normal distributions for intercept $\alpha$, with mean equals $50$ and variance equals $10^2$. This prior for intercept suggests that the average vote percentage is expected to be around 50% with some uncertainty.
+
+Formula (5) defines the prior normal distributions for parameter $\gamma_k$, with mean equals $0$ and variance equals $5^2$. This prior for splines indicates prior belief that the effects of number of days ($n_i$, end_data_num) are likely to be small but allowing for flexibility.
+
+Formula (6) assigns a prior to the standard deviation $\sigma$, where 1 is the rate parameter of the exponential distribution. Using such prior for variance reflects the belief that smaller values are more likely but allows for larger variations if needed.
 
 
-# Results
+### Assumptions of the Bayesian models
 
-Our results are summarized in @tbl-modelresults.
+Underlying assumptions for two Bayesian models are discussed below:
+
+1. Normality of residuals:
+
+The models assume that the residuals of the model (the differences between observed and predicted values) follow a normal distribution. This assumption is important for the validity of inference, and violation of this assumption can lead to incorrect inferences and unreliable credible intervals.
+
+2. Homoscedasticity:
+
+The variance of residuals is assumed to be constant across all combinations of the predictors. If the residuals exhibit heteroscedasticity (i.e., non-constant variance), this may lead to inefficient estimates and biased conclusions about the relationships modeled.
+
+3. Independence of observations:
+
+It is assumed that the observations are independent of each other. If there are correlated observations (e.g., repeated measures from the same individual), this could lead to biased estimates.
+
+4. Functional form:
+
+The relationship between the response variable and the predictor variable is assumed to be modeled appropriately, using natural splines to allow for flexibility. If the functional form does not adequately capture the underlying relationship, this can lead to biased estimates. The choice of degrees of freedom in the spline affects how well the model fits the data.
+
+5. Prior specification:
+
+The prior distributions for the parameters (i.e. intercept and coefficients) are assumed specified based on prior beliefs about their likely values. The choice of priors can influence the posterior estimates, reflecting reasonable beliefs about the parameters.
+
+
+## Model justification {#sec-model-justify}
+
+The Bayesian model with natural splines for predicting election outcomes with respect to the date is the most appropriate model because of several reasons. Firstly, the electoral dynamics for vote percentage could be highly complex and therefore non-linear. Various factors occurring before the election date could largely affect the outcomes. By employing natural splines, the model allows for the flexibility to capture these non-linear trends, presenting how support for a candidate evolves as the election date approaches, thus providing predictions about vote percentage.
+
+Moreover, the Bayesian framework inherently accommodates uncertainty in parameter estimates, which is particularly valuable in political polling where outcomes can be unpredictable. The ability to incorporate prior information and update beliefs based on observed data enhances the robustness of the model, making it be the most appropriate model.
+
+The above final model decision is made after considering several alternative models and variants. One alternative is a simple linear regression model (SLR), which assumes a constant linear relationship between the predictor (date) and the response (percentage support). Although the model is extremely straightforward and easy to interpret, it is far too simple for representing trends of and conducting predictions about election outcomes. SLR also applies plenty of strict assumptions to the population, the predictor and response variables, and violation of these assumptions, which is highly possible under this scenario, could lead to biased results.
+
+Another option was to use a generalized linear model (GLM). While GLMs can handle various response distributions, they still rely on a linear assumption for the predictors, which may not adequately reflect the evolving dynamics of voter sentiment over time. Moreover, GLMs do not provide the same level of flexibility in modeling non-linear relationships as splines do.
+
+After setting up the Bayesian model with splines, we expect a positive relationship between the percentage vote of Donald Trump and time passed since half year before the election. In other words, we anticipate that as the election date approaches, Donald Trump's support would increase. This expectation arises from the increasing support from minority voters, particularly from black voters [@nypostblack]. Also, all seven battleground states (Pennsylvania, Wisconsin, Michigan, Arizona, Nevada, Georgia, North Carolina) are expected to shift to support Trump [@nypoststate]. The vice-presidential debates that took place could be the major reason, which explain Trump’s appeal of ‘Unabashed machismo vibe’, motivating especially young voters to support him [@nypostyoung]. 
+
+
+## Model Validation {#sec-model-validate}
+
+During the modeling process, posterior predictive checks (PPC) is used. PPC is the comparison between what the fitted model predicts and the actual observed data, which validates whether the fitted model is compatible with the observed data. The aim is to detect if the model is inadequate to describe the data [@ppcheck].
+
+In the PPC plots, the x-axis represents the values of the response variable (in this case, the vote percentage of Donald Trump), and the y-axis represents the density or probability of those values. 
+
+The dark black line presents the density of the observed data ($y$), which is a smoothed estimate of the distribution of actual concentrated data points. On the other hand, the light blue lines present the density of the replicated data ($y_{rep}$), which is generated from the posterior predictive distribution of the model.
+
+Whether the black line matches well with the blue lines indicates how well the model fits the observed data. If the black line aligns well with the blue lines, it suggests that the model is performing well in capturing the actual data distribution, and vice versa. 
+
+@fig-model1ppcheck shows the posterior predictive checks for the first model, which predicts Trump's percentage vote over time in the national perspective. 
 
 ```{r}
 #| echo: false
@@ -156,8 +262,48 @@ spline_model_state <-
 ```{r}
 #| echo: false
 #| eval: true
+#| label: fig-model1ppcheck
+#| fig-cap: "Posterior predictive checks for model 1 (national)"
+#| warning: false
+
+pp_check(spline_model_national)
+```
+
+
+In @fig-model1ppcheck, the black line basically follows the trend of the light blue lines, indicating the observed data consistently falling within the range of simulated data. This suggests that the model provides a good fit, effectively predicting the actual trend of the data.
+
+Similarly, @fig-model2ppcheck shows the posterior predictive checks for the second model, which predicts Trump's percentage vote over time by state.
+
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-model2ppcheck
+#| fig-cap: "Posterior predictive checks for model 2 (by state)"
+#| warning: false
+
+pp_check(spline_model_state)
+```
+
+
+In @fig-model2ppcheck, Although the black line has minor deviation away from the light blue lines, and a part of the black line falls outside the range of simulated lines, the majority part of the black line matches with the light blue lines. 
+
+This suggests that the model basically provides a good fit, effectively predicting the actual trend of the data. But the fit is not that well compared to model 1, since there is a larger deviation in this plot than the previous PPC plot for model 1.
+
+
+
+# Results {#sec-result}
+
+## Overview
+
+The results from two Bayesian models are summarized in @tbl-modelresults.
+
+
+```{r}
+#| echo: false
+#| eval: true
 #| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of Trump Percentage Vote based on Sample Size and Pollster"
+#| tbl-cap: "Model Results of Trump Percentage Vote based on Date and State"
 #| warning: false
 
 modelsummary::modelsummary(
@@ -169,41 +315,22 @@ modelsummary::modelsummary(
 )
 ```
 
+@tbl-modelresults shows positive coefficients for natural splines for both two models (nationwide and state-specific). This suggests that as the election date approaches (i.e. more days passed since half year before election), the percentage vote increases in a non-linear relationship.
 
-Posterior predictive checks for national spline model:
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-pp_check(spline_model_national)
-```
+Model 2 additionally discusses state effects, including coefficients for each state respectively. FOr instance, state Massachusetts has the smallest, negative coefficient (-15.02), indicating that the response variable of vote percentage is significantly lower in California compared to the reference state. On the other hand, state South Dakota has the largest, positive coefficient (9.12), indicating a relatively higher response for the state. 
 
 
-Posterior predictive checks for state spline model:
+## Predictions and spline fit for vote percentage nationally
+
+@fig-model1results demonstrates the results of the first Bayesian model, including predictions and spline fit for vote percentage of Donald Trump in the perspective of the whole nation.
 
 
 ```{r}
 #| echo: false
 #| eval: true
+#| label: fig-model1results
+#| fig-cap: "Predict Posterior Draws and Spline Fit for Vote Percentage Nationally"
 #| warning: false
-#| message: false
-
-pp_check(spline_model_state)
-```
-
-
-Predict posterior draws and spline fit for votes nationally
-
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
 
 # Predict and plot
 # Create new data for prediction
@@ -245,20 +372,27 @@ ggplot(trump_national_data, aes(x = end_date_num, y = pct)) +
   labs(
     x = "Number of Days Since Half a Year Before Election",
     y = "Vote Percentage for Trump",
-    title = "Poll Percentage of Trump over Time with Spline Fit"
+    title = "Poll Percentage of Trump over Time with Spline Fit Nationally"
   ) +
   theme_minimal()
 ```
 
+The blue line drawn through the scatter points in @fig-model1results indicates an upward trend in the data. It represents that as the time approaches the election (i.e. more day passed since half year before election), Trump's vote percentage is expected to be higher. Though the intercept is below 45%, indicating that half year ago Trump's support was lower than Harris, the percentage vote has climbed to nearly 50% with a steady trend over time. The black spots on the graph are individual observations, and the shaded gray area represents the confidence interval for the predicted values. 
 
-Predict posterior draws and spline fit for votes in each state
+
+## Prediction and spline fit for vote percentage by state
+
+@fig-model2results demonstrates the results of the second Bayesian model, including predictions and spline fit for vote percentage of Donald Trump in each state respectively.
+
+The blue line drawn through the scatter points in each plot in @fig-model2results presents the trend of Trump's vote percentage over time. For all 23 states listed, the blue lines indicate upward relationship between the response and predictor variables. For some states such as Indiana, Misourri, Montana and Ohio, the vote percentage for Trump is higher than 50% for most of the time and is stably increasing. For other states, though the support is lower half year ago, the upward-sloping trend indicates final prediction about vote percentage to be potentially higher when the election date comes.
 
 
 ```{r}
 #| echo: false
 #| eval: true
+#| label: fig-model2results
+#| fig-cap: "Predict Posterior Draws and Spline Fit for Vote Percentage in Each State"
 #| warning: false
-#| message: false
 
 # Change 'pollster' and 'state' to factor variables
 trump_state_data <- trump_state_data |>
@@ -299,7 +433,7 @@ ggplot(trump_state_data, aes(x = end_date_num, y = pct, color = state)) +
   labs(
     x = "Number of Days Since Half a Year Before Election",
     y = "Vote Percentage for Trump",
-    title = "Poll Percentage of Trump over Time with Spline Fit"
+    title = "Poll Percentage of Trump over Time with Spline Fit by State"
   ) +
   theme_minimal() +
   facet_wrap(~ state, scales = "free_y") +  # Faceting by state
@@ -314,7 +448,8 @@ ggplot(trump_state_data, aes(x = end_date_num, y = pct, color = state)) +
 ```
 
 
-# Discussion
+
+# Discussion {#sec-discussion}
 
 ## First discussion point {#sec-first-point}
 
@@ -326,9 +461,23 @@ Please don't use these as sub-heading labels - change them to be what your point
 
 ## Third discussion point
 
-## Weaknesses and next steps
+## Weaknesses
 
-Weaknesses and next steps should also be included.
+Potential limitations of the Bayesian models are described below:
+
+1. Overfitting with complex models:
+
+Using splines with high degrees of freedom may lead to overfitting, where the model captures noise rather than the underlying trend. Overfitting reduces the model’s generalizability to new data.
+
+2. Missing data:
+
+Some data included to make predictions nationwide using the first Bayesian model have missing values in the predictor "state", and is cleaned out during the process of making predictions about how the vote percentage varies across different states with the second Bayesian model. These missing values in key variables could lead to biases in the model.
+
+3. Assumptions violation: 
+
+If the assumptions and priors of the models are violated, situations where the models may not be appropriate could occur. For instance, if the population of the response variable (pct) exhibits a skewed distribution instead of the normal distribution assumed, the models would be inappropriate and provide biased results.
+
+
 
 \newpage
 
@@ -337,9 +486,411 @@ Weaknesses and next steps should also be included.
 # Appendix {-}
 
 
-# Additional data details
+# Pollster methodology overview and evaluation: Emerson {#sec-appx-pollster}
 
-# Model details {#sec-model-details}
+## Background of Emerson College Polling
+
+Emerson College Polling is a famous U.S. polling organization as known for its precise and timely predictions, particularly in political forecasting such as the U.S, election. Emerson uses multiple methods approach, combining both traditional and modern techniques to capture a representative outcome of the election. Emerson College uses a mix of landline calls, text-to-web links, and online panel surveys to reach a broad range of people. This approach helps them collect decisions from a diverse group of likely voters.
+
+
+## Population, Frame, and Sample
+
+1. Population: 
+Emerson’s target population consists of likely U.S. voters, determined based on their past voting records, registration status, and stated intention to vote. For their 2024 surveys, they specifically target people who most likely to participate in upcoming elections, making adjustments to closely model the anticipated voter’s tendency
+
+2. Frame: 
+Emerson’s sampling frame includes U.S. census parameters, voter registration and exit polls(pre validated online panels). These lists are accurate to reflect key demographics, such as age, gender, race, education, and geographic region. By using stratified sampling and comprehensive voter files, Emerson ensures broad coverage across significant voting populations, including those who might hard to reach, such as rural or younger voters
+https://emersoncollegepolling.com/october-2024-national-poll-harris-50-trump-48/
+
+3. Sample: 
+Emerson College uses stratified sampling in their methodology to set quotas that match the actual demographic breakdown of the U.S. electorate. They use a combination of probability and non-probability sampling techniques, primarily from an online panel, MMS-to-web(text-to-web) surveys, and landline calls via Interactive Voice Response (IVR). For example, their sample size for national surveys typically consists of 1,000 likely voters, with each sample calibrated to reflect key demographic features.
+
+
+## Sample Recruitment Methods
+
+1. Cell Phone MSS-to-Web: 
+Emerson applies a text-to-web approach, sending potential respondents a survey link through MMS, this method is especially effective in reaching younger or mobile-first voters, they are more likely to response by one click rather than receiving an half-hour long call.
+
+2. Landline IVR: 
+IVR calls are used to reach older demographics or rural population who may be less engaged online or not familiar with new generation technology. The traditional method such as the landline calls are easier to accepted by them, and increases response rates among older adults and those in rural areas, which ensuring balanced representation across age groups.
+
+3. Online Panels: 
+Emerson also utilizes verified online panels, where respondents’ eligibility is cross-checked with voter file data, in order to exclude not potential voter’s response, this step reinforces sample accuracy.
+
+These recruitment methods help Emerson reach a wide audience, though self-selection bias may arise, particularly with online panel participants, as individuals joining these panels are often more politically engaged.
+
+
+## Sampling Approach’s Trade-offs
+
+Emerson’s sampling approach uses stratification to set quotas based on demographic factors, such as age, race, gender, education, and location. Post-stratification weighting further adjusts these quotas to align the sample with Census and voter registration data.
+
+
+### Advantages
+
+1. Inclusivity: 
+By applying a combination of recruitment methods, Emerson reaches a range of voter groups across demographics, which avoid the incomplete context representation bias.
+
+2. Budget Saving:
+Digital methods such as text-to-web and online survey are generally less expensive than the traditional methods (landline call).
+
+3. Effectiveness: 
+Using text-to-web and online panels allows a quick receiving of the answers, for rapid adjustments and data collection.
+
+
+### Disadvantages
+
+1. Non-Probability Limitations: 
+Non-probability sampling means not all individuals have an equal chance of being selected, in some of Emerson’s methods such as landline call, targeted people are not randomly choose, which can increase potential bias.
+
+2. Access Bias: 
+Voters without internet or mobile access may be underrepresented, particularly among lower-income or rural demographics, which can increase the incomplete representation bias.
+
+
+## Handling Non-Response
+
+To address non-response bias, Emerson applies demographic weighting to underrepresented groups, such as younger voters or certain racial demographics, they put more weight for these groups. 
+Emerson occasionally provides incentives to respondents, which encourages survey completion. This is especially effective in boosting participation rates for online panel members, who may be less likely to complete surveys without additional motivation. However, people with lower political engagement levels may still be less likely to respond, which could impact representativeness.
+
+
+## Questionnaire Design’s Advantages and Disadvantages
+
+### Advantages
+
+1. Clarity and Style of Question: 
+Emerson focuses on straightforward, unbiased questions to ensure respondents understand each item consistently, closed-ended questions make voters are easy to give the answer without too much thinking, which decrease the drops-out.
+
+2. Relevance and Adaptability: 
+Questions are updated regularly to reflect current political events, enhancing the survey’s relevance and accuracy.
+
+
+### Disadvantages
+
+1. Simplicity: 
+Online surveys typically rely on multiple-choice or straightforward questions, which may limit deeper insights into complex opinions or voter’s tendency. 
+
+2. Question Order Bias: 
+The order of questions presented can unintentionally influence voter responses. For example, asking participants to rate their favorability towards Kamala Harris before asking about other candidates could mislead respondents, subtly framing how they perceive subsequent individuals. This can lead to "order effects," in polls, order effects can create a bias, especially if the initial question involves a polarizing candidate, it may cause strong emotions that influence answers to following questions.
+
+3. Potential Response Fatigue: 
+Frequent participation in polls may lead to rushed responses, impacting quality.
+
+
+## Conclusion
+
+Emerson College’s approach combines traditional and digital methodologies to reach a comprehensive and representative sample of U.S. likely voters. Even the inclusion of diverse communication methods enhances accessibility and speed, challenges such as self-selection bias and non-probability sampling limitations still appear. Despite these, Emerson’s effective stratification and weighting strategies have made its poll significant in prediction of U.S. elections.
+
+
+
+# Idealized Methodology and Survey {#sec-appx-survey}
+
+## Overview
+
+The idealized survey methodology is designed to forecast the outcome of the upcoming U.S. presidential election accurately. This approach will focus on a robust sampling strategy, targeted recruitment, comprehensive data validation, and effective poll aggregation. A budget of $100,000 will be allocated to ensure that each aspect of the methodology is fully supported and that the resulting data is accurate and representative.
+
+
+## Sampling Approach
+### Target Population
+
+The target population consists of U.S. registered voters eligible to vote in the upcoming presidential election. This population includes diverse demographic groups, varying by age, race, gender, geography, and political affiliation, all of which are critical to accurate representation.
+
+
+### Sampling Frame
+
+To build a representative sampling frame, recent national voter registration data from reliable sources, such as the U.S. Election Assistance Commission, will serve as the foundation. This data will be enhanced by voter profile databases from third-party aggregators like Catalist, which consolidate demographic, geographic, and political affiliation data. To ensure the sample reflects the diversity of the U.S. electorate, quotas will be set based on demographic data from the U.S. Census and Bureau of Labor Statistics, including age, race, gender, income, and urban-rural distribution.
+
+
+
+### Sample Size
+
+We will take a sample of at least 3,000 respondents to balance statistical accuracy with budget constraints.
+
+
+### Stratified Random Sampling
+
+To achieve the goal of accurate and representative sample, we will apply stratified random sampling by using key demographic categories to divide the sample into strata that reflect the U.S. voting population’s diversity. Stratify as followed:
+
+- Age: Use age brackets (18-29, 30-44, 45-64, 65+) based on voter turnout trends, as younger age groups are often underrepresented.
+
+- Gender: Stratify by gender to capture any potential disparities in voting behavior.
+
+- Race and Ethnicity: Reflect population proportions of racial and ethnic groups, as provided by census data.
+
+- Geography: Stratify by state and, within each state, by rural, suburban, and urban classifications to capture regional voting patterns.
+
+- Political Affiliation: Where available, include political party affiliation, such as Democrat, Republican and Independent, to account for differing levels of partisan engagement.
+
+Within the division, we will randomly select respondents within each stratum to match the proportions of these demographic categories in the general population.
+
+
+### Trade-offs
+
+This approach minimizes bias but can be costly due to increased recruitment needs in underrepresented groups. Random sampling may also limit the ability to reach specific subsets of voters.
+
+
+## Data Validation
+
+As data quality is imperative to reach a reliable prediction, we will apply the following examinations to assure the validation:
+
+- Verification of Responses: Employ CAPTCHA for online responses to limit bot entries and cross-check voter registration data to confirm respondent eligibility.
+
+- Consistency Checks: Highlight and review responses with inconsistencies, such as duplicate IP addresses or extreme response times, and validate through follow-up when feasible.
+
+- Data Cleaning: Remove incomplete or invalid responses and use imputation techniques for minor missing data if the omission rate is low.
+
+
+## Poll Aggregation Methodology
+
+We will pick the poll-of-polls approach aggregates results from multiple polling sources to produce a more stable and representative forecast of the U.S. presidential election. This method helps to mitigate individual poll biases, smooth out fluctuations, and capture a broader picture of voter sentiment. Polls will be weighted by the following factors:
+
+- Sample Size: Larger sample size polls will receive greater weight to reflect their higher statistical reliability.
+
+- Recency Emphasis: The most recent polls are given greater influence in the aggregation to reflect real-time changes in voter preferences. Time-weighting is applied to each poll within the last month, with those closest to the current date contributing most to the overall estimate.
+
+- Outlier Identification: Identify outlier polls by analyzing their deviation from the rolling average of other polls. Polls with extreme deviation from the average will be assessed individually to determine if they represent unique insights or sampling anomalies.
+
+
+## Survey
+
+This survey will be conducted using Google Forms, which is an effective platform for data collection. The survey can be accessed by the link, [Google Form Survey](https://forms.gle/idZjFmgyTo6wyhss8).
+
+
+### Survey Structure
+
+**Title:**
+
+2024 U.S. Presidential Election Forecast Survey
+
+**Introduction:**
+
+We appreciate your participation in this survey, which aims to forecast the outcome of the 2024 U.S. Presidential election. Your responses are essential for our research.
+
+**Please note:**
+
+- Your answers will be treated with complete confidentiality.
+
+- Participation in this survey is voluntary.
+
+- We encourage you to provide honest and thoughtful responses.
+
+- The survey is estimated to take about 5 minutes to complete.
+
+- If you have any questions or concerns, feel free to reach out to our research team at [anjojoo.xu@mail.utoronto.ca](anjojoo.xu@mail.utoronto.ca)  (Angel Xu, Yunkai Gu, Yitong Wang).
+
+Thank you for your valuable contribution! As a token of our appreciation, each participant will receive $5 upon completion of the survey.
+
+**Section 1: Eligibility**
+
+Are you a U.S. citizen?
+
+- Yes
+
+- No (End Survey)
+
+Do you meet your state’s residency requirements?
+
+- Yes
+
+- No (End Survey)
+
+Will you be 18 years old  or elder by the Election Day?
+
+- Yes
+
+- No (End Survey)
+
+Are you registered to vote by your state's voter registration deadline. (North Dakota does not require voter registration.)
+
+- Yes
+
+- No
+
+- Plan to register later
+
+- Maybe
+
+**Section 2: Demographics**
+
+The following questions will help us understand the background characteristics of our respondents.
+
+Which age group do you belong to?
+
+- 18-29 years
+
+- 30-44 years
+
+- 45-64 years
+
+- 65 years or older
+
+What is your gender?
+- Male
+
+- Female
+
+- Other
+
+- Prefer not to say
+
+What is your race or ethnicity? Please select all that apply.
+- White
+
+- Black or African American
+
+- Hispanic or Latino
+
+- Asian
+
+- Native American or Alaska Native
+
+- Native Hawaiian or Other Pacific Islander
+
+- Prefer not to say
+
+- Other
+
+Which U.S. state do you currently reside in?
+
+[answer box]
+
+What region do you live in within your state?
+
+- Rural
+
+- Suburban
+
+- Urban
+
+- Prefer not to say
+
+What is your political affiliation?
+
+- Democratic
+
+- Republican
+
+- Independent
+
+- Libertarian
+
+- Green Party
+
+- Prefer not to say
+
+- Other
+
+**Section 3: Voting Behavior and Intentions**
+
+These questions focus on voting registration and plans for the upcoming election.
+
+How likely is it that you will vote in the 2024 U.S. Presidential Election?
+
+- Very likely
+
+- Somewhat likely
+
+- Somewhat unlikely
+
+- Very unlikely
+
+If the election were held today, which candidate would you most likely vote for?
+
+- Donald Trump
+
+- Kamala Harris
+
+- Not sure
+
+- Prefer not to say
+
+- Other
+
+How confident are you that your choice would remain the same by Election Day?
+
+- Not at all confident
+
+- Slightly confident
+
+- Moderately confident
+
+- Very confident
+
+- Completely confident
+
+**Section 4: Engagement with the Election**
+
+This section aims to understand how actively our respondents follow and discuss the election.
+
+How closely do you follow news and updates related to the 2024 U.S. Presidential Election?
+
+- Very closely
+
+- Somewhat closely
+
+- Not very closely
+
+- Not at all
+
+How often do you discuss the 2024 U.S. Presidential Election with friends, family, or colleagues?
+
+- Daily
+
+- Weekly
+
+- Occasionally
+
+- Rarely
+
+- Never
+
+**Section 5: Additional Insights**
+
+We appreciate any additional thoughts our respondents may have on the upcoming election.
+
+Do you have any further comments or insights about the factors that might affect the 2024 U.S. Presidential Election? (optional)
+
+[Answer box]
+
+**End Message:**
+
+Thank You for Completing the Survey!
+
+We appreciate your time and thoughtful responses. Your participation is invaluable in helping us gather insights for our research on the 2024 U.S. Presidential Election forecast. Your answers will contribute to a more comprehensive understanding of voter trends and factors influencing this election.
+
+If you have any further questions or would like to know more about this study, please feel free to reach out to our research team at [anjojoo.xu@mail.utoronto.ca](anjojoo.xu@mail.utoronto.ca).
+
+As a thank you, each participant will receive a $5 reward shortly after survey completion.
+
+
+## Survey Budget Allocation
+
+- Sampling & Recruitment: $50,000. To ensure a large and diverse sample, the majority of the budget are distributed for online recruitment and sampling.
+
+- Incentives: $15,000. Fund small incentives for respondent participation.
+
+- Data Validation and Cleaning: $10,000. Employ validation mechanisms to ensure data quality.
+
+- Poll Aggregation and Analysis: $15,000. Use advanced analytical methods for accurate aggregation.
+
+- Miscellaneous Costs: $10,000. Cover unforeseen costs in recruitment, data cleaning, or analysis.
+
+
+## Survey Design Considerations
+
+The survey was designed with a focus on clarity, respondent comfort, and data reliability. Questions flow logically, from demographic information to voting intentions, perceptions, and engagement, reducing cognitive load. Wording is conversational, neutral, and direct, minimizing confusion and potential bias. Multiple-choice questions provide efficiency in response and analysis, while open-ended questions are selectively used for unique insights. A pilot test will be conducted to refine clarity and flow, ensuring that all questions are relevant, easy to answer, and respectful of the respondent’s experience.
+
+
+## Methodology Strength and Weakness
+### Strengths
+
+This methodology leverages stratified random sampling and poll-of-polls aggregation, providing a balanced, representative forecast by combining demographic weighting and time-based adjustments. Outlier detection and confidence intervals further enhance reliability, making the forecast adaptable to real-time shifts in voter sentiment.
+
+### Weaknesses
+
+Limitations include potential sampling and non-response bias, as underrepresented groups and undecided voters may be difficult to capture. Additionally, reliance on self-reported data and aggregated poll results introduces variability, while temporal limitations may impact accuracy close to Election Day. The forecast provides a likely outcome range but cannot fully account for unexpected events or behavioral shifts.
+
+
+
+# Additional Model details {#sec-model-details}
 
 ## Posterior predictive check
 
