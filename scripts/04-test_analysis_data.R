@@ -1,69 +1,64 @@
 #### Preamble ####
-# Purpose: Tests... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 26 September 2024 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Tests the structure and format of election analysis data
+# Author: Yunkai Gu & Anqi Xu & Yitong Wang
+# Date: 4 November 2024
+# Contact: kylie.gu@mail.utoronto.ca & anjojoo.xu@mail.utoronto.ca & stevenn.wang@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Pre-requisites:
+# - The `tidyverse` `testthat` `arrow` packages must be installed and loaded
+# - 03-clean_data.R must have been run
+
 
 
 #### Workspace setup ####
 library(tidyverse)
 library(testthat)
+library(arrow)
 
-data <- read_csv("data/02-analysis_data/analysis_data.csv")
+election_data <- read_parquet("data/02-analysis_data/trump_state_data.parquet")
 
 
 #### Test data ####
-# Test that the dataset has 151 rows - there are 151 divisions in Australia
-test_that("dataset has 151 rows", {
-  expect_equal(nrow(analysis_data), 151)
+test_that("analysis data structure is correct", {
+  # Test if 'election_data' exists and is a tibble
+  expect_true(is_tibble(election_data))
 })
 
-# Test that the dataset has 3 columns
-test_that("dataset has 3 columns", {
-  expect_equal(ncol(analysis_data), 3)
+test_that("all required columns are present", {
+  # Test whether all required columns are present
+  required_columns <- c("end_date", "sample_size", "state", 
+                        "pct", "end_date_num", "num_vote")
+  expect_true(all(required_columns %in% colnames(election_data)))
 })
 
-# Test that the 'division' column is character type
-test_that("'division' is character", {
-  expect_type(analysis_data$division, "character")
+test_that("analysis data columns have correct format", {
+  # Check if each column has the correct data type
+  expect_true(is.Date(as.Date(election_data$end_date)))  # Convert to Date if necessary
+  expect_true(is.numeric(election_data$sample_size))
+  expect_true(is.character(election_data$state))
+  expect_true(is.numeric(election_data$pct))
+  expect_true(is.numeric(election_data$end_date_num))
+  expect_true(is.numeric(election_data$num_vote))
 })
 
-# Test that the 'party' column is character type
-test_that("'party' is character", {
-  expect_type(analysis_data$party, "character")
+
+test_that("end_date column is within proper range", {
+  # Test if all 'end_date' values are between May 8, 2024, and Oct 22, 2024
+  expect_true(all(as.Date(election_data$end_date) >= as.Date("2024-05-08") &
+                    as.Date(election_data$end_date) <= as.Date("2024-10-22")))
 })
 
-# Test that the 'state' column is character type
-test_that("'state' is character", {
-  expect_type(analysis_data$state, "character")
+test_that("end_date_num values are calculated correctly", {
+  # Test whether 'end_date_num' corresponds correctly to 'end_date' minus May 7, 2024
+  calculated_end_date_num <- as.numeric(as.Date(election_data$end_date) - as.Date("2024-05-07"))
+  expect_equal(election_data$end_date_num, calculated_end_date_num)
 })
 
-# Test that there are no missing values in the dataset
-test_that("no missing values in dataset", {
-  expect_true(all(!is.na(analysis_data)))
-})
-
-# Test that 'division' contains unique values (no duplicates)
-test_that("'division' column contains unique values", {
-  expect_equal(length(unique(analysis_data$division)), 151)
-})
-
-# Test that 'state' contains only valid Australian state or territory names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", "Western Australia", 
-                  "Tasmania", "Northern Territory", "Australian Capital Territory")
-test_that("'state' contains valid Australian state names", {
-  expect_true(all(analysis_data$state %in% valid_states))
-})
-
-# Test that there are no empty strings in 'division', 'party', or 'state' columns
-test_that("no empty strings in 'division', 'party', or 'state' columns", {
-  expect_false(any(analysis_data$division == "" | analysis_data$party == "" | analysis_data$state == ""))
-})
-
-# Test that the 'party' column contains at least 2 unique values
-test_that("'party' column contains at least 2 unique values", {
-  expect_true(length(unique(analysis_data$party)) >= 2)
+test_that("state values are valid", {
+  # Test if 'state' values are within the provided state list
+  valid_states <- c("Pennsylvania", "North Carolina", "Wisconsin", "South Dakota", "Georgia", 
+                    "Arizona", "Maryland", "Texas", "Florida", "California", "New Hampshire", 
+                    "Michigan", "Nevada", "Montana", "Ohio", "Massachusetts", "Nebraska CD-2", 
+                    "New York", "Virginia", "Missouri", "Indiana", "New Mexico", "Minnesota")
+  expect_true(all(election_data$state %in% valid_states))
 })
