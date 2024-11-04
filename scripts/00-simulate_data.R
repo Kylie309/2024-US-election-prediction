@@ -1,7 +1,7 @@
 #### Preamble ####
 # Purpose: Simulates a dataset of American election
 # Author: Yunkai Gu & Anqi Xu & Yitong Wang
-# Date: 11 NOvember 2024
+# Date: 4 NOvember 2024
 # Contact: kylie.gu@mail.utoronto.ca & anjojoo.xu@mail.utoronto.ca & stevenn.wang@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: The `tidyverse` package must be installed
