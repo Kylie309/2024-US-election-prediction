@@ -1,7 +1,7 @@
 #### Preamble ####
 # Purpose: Cleans the raw poll dataset
 # Author: Yunkai Gu & Anqi Xu & Yitong Wang
-# Date: 25 October 2024
+# Date: 4 November 2024
 # Contact: kylie.gu@mail.utoronto.ca & anjojoo.xu@mail.utoronto.ca & stevenn.wang@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: Downloaded raw data from fivethirtyeight
@@ -28,10 +28,8 @@ national_data <-
   mutate(end_date = mdy(end_date)) |>
   # choose data during half a year before the election (Nov 5, 2024)
   filter(end_date >= as.Date("2024-05-05")) |> 
-  # convert binary variable hypothesis into value 1 and 0
-  mutate(hypothetical = ifelse(hypothetical == "TRUE", 1, 0)) |> 
   # select columns needed for analysis
-  select(pollster, end_date, sample_size, state, hypothetical, pct) |>
+  select(end_date, sample_size, state, pct) |>
   # change date to be number of days since half year ago - it's a counter not a date
   mutate(end_date_num = as.numeric(end_date - min(end_date))) |>
   # need vote in number not percent for some models
@@ -43,7 +41,7 @@ state_data <-
 
 
 #### Save data ####
-# write_csv(national_data, "data/02-analysis_data/trump_national_data.csv")
-# write_csv(state_data, "data/02-analysis_data/trump_state_data.csv")
+write_csv(national_data, "data/02-analysis_data/trump_national_data.csv")
+write_csv(state_data, "data/02-analysis_data/trump_state_data.csv")
 write_parquet(national_data, "data/02-analysis_data/trump_national_data.parquet")
 write_parquet(state_data, "data/02-analysis_data/trump_state_data.parquet")
