@@ -474,14 +474,22 @@ ggplot(trump_national_data, aes(x = end_date_num, y = pct)) +
   theme_minimal()
 ```
 
-The blue line drawn through the scatter points in @fig-model1results indicates an upward trend in the data. It represents that as the time approaches the election (i.e. more day passed since half year before election), Trump's vote percentage is expected to be higher. Though the intercept is below 45%, indicating that half year ago Trump's support was lower than Harris, the percentage vote has climbed to nearly 50% with a steady trend over time. The black spots on the graph are individual observations, and the shaded gray area represents the confidence interval for the predicted values. 
+The blue line drawn through the scatter points in @fig-model1results indicates an upward trend in the data. It represents that as the time approaches the election (i.e. more day passed since half year before election), Trump's vote percentage is expected to be higher. Though the intercept is below 45%, indicating that half year ago Trump's support was lower than Harris, the percentage vote has climbed to nearly 50% with a steady trend over time. This phenomena notably illustrates a significant potential shift in voter support.
+
+The trend aligns with the hypothesis that voter support typically intensifies as the election date nears, potentially due to increased campaign activities.
+
+The black spots on the graph are individual observations. The shaded gray area represents the confidence interval for the predicted values, reflecting the uncertainty around the predicted values.
 
 
 ## Prediction and Spline Fit for Vote Percentage by State
 
 @fig-model2results demonstrates the results of the second Bayesian model, including predictions and spline fit for vote percentage of Donald Trump in each state respectively.
 
-The blue line drawn through the scatter points in each plot in @fig-model2results presents the trend of Trump's vote percentage over time. For all 23 states listed, the blue lines indicate upward relationship between the response and predictor variables. For some states such as Indiana, Misourri, Montana and Ohio, the vote percentage for Trump is higher than 50% for most of the time and is stably increasing. For other states, though the support is lower half year ago, the upward-sloping trend indicates final prediction about vote percentage to be potentially higher when the election date comes.
+The blue line drawn through the scatter points in each plot in @fig-model2results presents the trend of Trump's vote percentage over time. For all 23 states listed, the blue lines indicate upward relationship between the response and predictor variables. 
+
+The individual plots for each state reveal diverse patterns of voter support, highlighting the complex electoral landscape of the United States. For some states such as Indiana, Misourri, Montana and Ohio, the vote percentage for Trump is higher than 50% for most of the time and is stably increasing. For other states, though the support is lower half year ago, the upward-sloping trend indicates final prediction about vote percentage to be potentially higher when the election date comes.
+
+These state-specific analyses emphasize the importance of localized campaigning strategies, as voter preferences are influenced by state-specific issues. 
 
 
 ```{r}
@@ -566,7 +574,7 @@ In conclusion, we predict that the voting and support inclination will continue 
 
 What we learned from this study is the understanding of how temporal dynamics influence voter preferences in electoral contexts. 
 
-Besides providing predictions about the upcoming 2024 election, the upward sloping trend in vote percentage for Donald Trump with respect to days passed since half year ago found by the paper suggests that voters are highly responsive to the political incidence. As mentioned before, frequent presidential debates, promises made by politicians at the last minute, or a sudden outbreak of an event would incite more people to vote for candidate, or change their mind and switch to support the other. 
+Besides providing predictions about the upcoming 2024 election, the increasing trend in vote percentage for Donald Trump as the election approaches found by the paper suggests that voters are highly responsive to the political incidence. The model’s ability to capture these shifts provides valuable insights for political strategists and analysts, emphasizing the necessity to continuously monitor voter sentiments in the lead-up to elections. As mentioned before, frequent presidential debates, promises made by politicians at the last minute, or a sudden outbreak of an event would incite more people to vote for candidate, or change their mind and switch to support the other. 
 
 This finding underscores the fluid nature of voter intentions, and the critical role of time in shaping electoral outcomes. For political strategists, the paper emphasizes the importance of imposing more provocative measures as the election date is nearer. For voters, this paper could help them understand the dynamic flow of political elections clearly, and help to maintain distinct, calm overview during election activities.
 
@@ -575,9 +583,11 @@ This finding underscores the fluid nature of voter intentions, and the critical 
 
 Moreover, the second Bayesian model in the paper included state as a fixed effect, providing information on not only the electoral behaviors of the voters from a broad national perspective, but also on the regional variations in support trends. 
 
-By considering locational issues, the predictions and analysis about the vote tendency with respect to time could be conducted more completely, and enable people to view the reasons behind the formation of such preferences from the perspective of regional differences. For instance, the model identifies states like South Dakota, where Trump’s support is relatively high, versus states like Massachusetts, which shows a comparatively low, negative coefficient.
+By considering regional issues, the predictions and analysis about the vote tendency with respect to time could be conducted more completely, and enable people to view the reasons behind the formation of such preferences from the perspective of regional differences. For instance, the model identifies states like South Dakota, where Trump’s support is relatively high, versus states like Massachusetts, which shows a comparatively low, negative coefficient.
 
-The study reveals the disparities in voter support across different locations, reinforcing the idea that a "one-size-fits-all" approach to campaigning is highly inadequate. The finding encourages politicians to encourage politicians to "suit the remedy to the case", and choose different political strategies and means based on the preferences and beliefs of people in various regions respectively, in order to gain the trust and support of voters.
+The study reveals the disparities in voter support across different locations, highlighting the regional variations in electoral behavior, and reinforcing the idea that a "one-size-fits-all" approach to campaigning is highly inadequate. The finding encourages politicians to encourage politicians to "suit the remedy to the case", and illustrates that electoral strategies must be tailored to address the unique characteristics and concerns of voters in different regions in order to gain the trust and support of voters.
+
+The findings also potentially indicate that other demographic factors such as age, race, and educational background could play a crucial role in shaping voter preferences. In particular, younger voters may exhibit different support patterns compared to older demographics, reflecting generational shifts in political engagement and priorities. The paper highlights the need for political campaigns to engage with diverse voter segments, recognizing that their motivations and preferences may differ significantly.
 
 
 ## Weaknesses
@@ -586,15 +596,17 @@ Potential limitations of the Bayesian models are described below:
 
 1. Overfitting with complex models:
 
-Using splines with high degrees of freedom may lead to overfitting, where the model captures noise rather than the underlying trend. Overfitting reduces the model’s generalizability to new data.
+Due to the complexity of the models, using splines with high degrees of freedom may lead to overfitting, where the model captures noise rather than the underlying trend. Overfitting reduces the model’s generalizability to new data and diminishes the predictive validity for the models.
 
 2. Missing data:
 
-Some data included to make predictions nationwide using the first Bayesian model have missing values in the predictor "state", and is cleaned out during the process of making predictions about how the vote percentage varies across different states with the second Bayesian model. These missing values in key variables could lead to biases in the model.
+Some data included to make predictions nationwide using the first Bayesian model have missing values in the predictor "state", and was cleaned out during the process of making predictions about how the vote percentage varies across different states with the second Bayesian model. These missing values in key variables could lead to biases in the model. For instance, if significant segments of the population are underrepresented due to missing data, the conclusions drawn from the analysis may not accurately reflect the true electoral trend.
 
 3. Assumptions violation: 
 
-If the assumptions and priors of the models are violated, situations where the models may not be appropriate could occur. For instance, if the population of the response variable (pct) exhibits a skewed distribution instead of the normal distribution assumed, the models would be inappropriate and provide biased results.
+If the assumptions and priors of the models are violated, situations where the models may not be appropriate could occur. For instance, if the population of the response variable (pct) exhibits a skewed distribution instead of the normal distribution assumed, the models would be inappropriate and provide biased results. 
+
+In reality, voter preferences may also exhibit clustering effects, particularly within communities or social networks. This could lead to correlated observations that the current models do not adequately account for, potentially skewing the results.
 
 
 ## More to Be Done
@@ -605,7 +617,9 @@ Firstly, more models could be considered to be used in the predicting procedure.
 
 Secondly, data collection methodologies could be improved as well. In this study only one raw dataset was used, arising potential issues in true representativeness of the polling data. Finding and using more data would lead to more accurate and relaible predictions in future electoral analysis.
 
-Last but not least, evaluations on the possible reasons behind the trends of the vote percentage could be investigated. Specifically, since the second Bayesian model included in this paper considered state as a fixed effect, further researches could analysis why such regional variations exist. Is this because people in each region have their own unique sets of values and beliefs, or is it because people in a certain region have experienced the same events? Future studies could explore the integration of additional predictors, and consider various factors such as socio-economic reasons, historical issues, and ethic identity.
+Last but not least, evaluations on the possible reasons and external factors behind the trends of the vote percentage could be investigated. For instance, significant media coverage of Trump’s campaign activities or strategic appearances in battleground states could sway public opinion and drive changes in voter support. 
+
+Specifically, since the second Bayesian model included in this paper considered state as a fixed effect, further researches could analysis why such regional variations exist. Is this because people in each region have their own unique sets of values and beliefs, or is it because people in a certain region have experienced the same events? Future studies could explore the integration of additional predictors, and consider various factors such as socio-economic reasons, historical issues, and ethic identity. 
 
 
 \newpage
