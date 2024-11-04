@@ -1,6 +1,6 @@
 ---
 title: "Prediction about 2024 U.S. Presidential Election Outcome Using Bayesian Modeling"
-subtitle: "Vote Percentage of Donald Trump over Time"
+subtitle: "Increasing Vote Percentage for Donald Trump over Time"
 author: 
   - Yunkai Gu
   - Anqi Xu
@@ -8,7 +8,7 @@ author:
 thanks: "Code and data are available at: [https://github.com/Kylie309/2024-US-election-prediction](https://github.com/Kylie309/2024-US-election-prediction)."
 date: today
 date-format: long
-abstract: "This study aims to forecast the outcome of the 2024 U.S. Presidential Election using aggregated polling data and a Bayesian modeling approach. The study also includes an analysis of a selected pollster’s methodology and an idealized survey design for forecasting elections within a limited budget."
+abstract: "This study employs Bayesian modeling to predict the 2024 U.S. presidential election outcomes, and analyzing public support trends for Donald Trump. We using national and state level data to model how Trump’s vote percentage evolves as the election approaches. The model captures temporal and regional patterns in support levels, which revealing a rise in Trump’s favorability, particularly in the pivotal states such as Pennsylvania, Michigan, and Florida. These findings are valuable for campaign strategists and policymakers, providing a detailed understanding of voter motivations and helping anticipate shifts that could affect the election outcome."
 format: pdf
 toc: true
 number-sections: true
@@ -29,27 +29,26 @@ library(rstanarm)
 library(splines)
 library(ggplot2)
 library(arrow)
+library(knitr)
+library(RColorBrewer)
 ```
 
 
 # Introduction
 
-The U.S. presidential election is a critical event that attracts substantial public and media interest. Various tools and methodologies have then been used for making predictions about the final electoral outcome.  
-Curious about the election outcome as well, this paper employs the "poll-of-polls" approach to make predictions, which aggregates multiple polls to minimize biases and enhance prediction accuracy. Two Bayesian models are built to forecast the winner of the 2024 U.S. Presidential Election. In addition, in-depth analysis on certain pollster's methodology is also included, discussing their sampling approach, strengths, and weaknesses.
+The 2024 U.S. presidential election is set to be an important event in American politics, marked by changing voter demographics, shifting public opinions, and a more divided electorate. In this study, we utilize Bayesian modeling to project the percentage of support for Donald Trump in the 2024 U.S. Presidential Election. Recognizing that traditional individual polls may involve biases and inconsistencies, in order to solve it, we aggregate data from a range of high quality polls to produce a more stable and reliable forecast. Our model focuses on both national voting trends and state level voting trends, to capture more details and make the predictions more precisely. Some critical states, where subtle changes in support could heavily impact the final election outcome.
 
-Overview paragraph
+The main estimand of this analysis is the anticipated level of Trump’s support across both national and state levels, we employing two Bayesian regression models, and incorporate variables such as polling firm, sample size, geographic region, and poll recency to capture nuanced voter dynamics. One model focusing on national trends and another capturing state level dynamics. The nationwide model uses temporal data with natural splines to track Trump’s support trajectory as the election approaches. The dual-model approach, which includes natural splines for time adjustments and fixed effects for state-specific dynamics, provides a nuanced view of how both national and local factors influence voter preferences. This two model allows us to incorporate the latest data and dynamically update the forecast as new polling information becomes available.
 
-Estimand paragraph
+The results of this study reveal an upward trend in percentage of support for Donald Trump as the 2024 U.S. presidential election approaches. The Bayesian model focusing on national voting trends indicates that Trump's vote percentage is expected to rise from approximately 45% six months prior to the election to nearly 50% as the election date nears. The other Bayesian model, which incorporates state-specific effects, highlights regional differences on the vote trend for Donald Trump. Specifically, there are states which show significantly higher support for Trump and steady increasing trend, such as Indiana, Misourri, Montana and Ohio. Both Bayesian models help to provide positive expectations about the final election outcome for Trump, making optimistic predictions.
 
-Results paragraph
-
-Why it matters paragraph
+Our study construct a advanced and diversified way to forcast the outcome than traditional poll. Individual poll often suffer from biases, inconsistencies, and a lack of adaptability as election day approaches, since its limitation of method and subjectivity of initiator. By using Bayesian modeling across both national and state levels, this study employs two models integrate data across multiple polls, which not only reduces biases associated with individual polls, but also reveals how support varies by state and changes over time. It provides a dynamic and precise forecast of voter preferences. This level of detail is essential for campaign teams and political analysts seeking to understand not just who leads, but where and when critical shifts in support may occur, allowing for crucial adjustments in messaging, resource distribution, and voter engagement efforts. Furthermore, it offers a rigorous framework for future election predictions, and emphasis the importance of adaptive modeling in capturing the true dynamics of voter's decision in real time, rather than relying solely on static opinion.
 
 The remainder of this paper is structured as follows:
 
-@sec-data introduces the overview of the data (@sec-data-overview), measurement (@sec-data-measure), as well as explanations of outcome (@sec-data-outcome) and predictor variables (@sec-data-predictor). @sec-model explains the modeling process in detail, including procedure of model set-up (@sec-model-set) and model justification (@sec-model-justify). Then, @sec-result presents the prediction outcome, and @sec-discussion discusses the results and models. 
+@sec-data introduces the overview of the data (@sec-data-overview), measurement (@sec-data-measure), data cleaning process (@sec-data-cleaning), as well as explanations, descriptions, table and graph summaries of outcome (@sec-data-outcome) and predictor variables (@sec-data-predictor) of the study. @sec-model explains the modeling process in detail, including procedure of model set-up (@sec-model-set) and model justification (@sec-model-justify). Then, @sec-result presents the prediction outcome and results by plots, and @sec-discussion discusses the results and models in a broader context. 
 
-Appendix includes three parts: [Appendix -@sec-appx-pollster] presents methodology overview and evaluation of one certain pollster - Emerson; [Appendix -@sec-appx-survey] provides detailed idealized methodology and survey design for the poll; [Appendix -@sec-model-details] presents additional details during modeling process, including posterior predictive check [Appendix -@sec-ppc], comparison between posterior and prior distributions [Appendix -@sec-pvp], and diagnostics [Appendix -@sec-diagnostics].
+Appendix includes four parts: [Appendix -@sec-appx-pollster] presents methodology overview and evaluation of one certain pollster - Emerson; [Appendix -@sec-appx-survey] provides detailed idealized methodology and survey design for the poll; [Appendix -@sec-cleaning-details] describes the data cleaning process in detail; [Appendix -@sec-model-details] presents additional details during modeling process, including posterior predictive check [Appendix -@sec-ppc], comparison between posterior and prior distributions [Appendix -@sec-pvp], and diagnostics [Appendix -@sec-diagnostics].
 
 
 
@@ -59,21 +58,36 @@ Appendix includes three parts: [Appendix -@sec-appx-pollster] presents methodolo
 
 The analysis uses the dataset of national presidential general polls from FiveThirtyEight [@fivethirtyeight]. Following @tellingstories, we consider to make predictions about the election outcome based on the data.
 
-The analyses presented in this paper were conducted using R programming language [@citeR]. The `tidyverse` packages [@citetidyverse] were used in the process of data simulation, testing beforehand. After the original raw data was downloaded by using `tidyverse` package [@citetidyverse], data cleaning process was done by using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], and `arrow` package [@citearrow]. Then, models were constructed using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], `rstanarm` [@citerstanarm] package, and `splines` package [@citesplines]. The model results are then presented by `modelsummary` [@citemodelsummary] package, and graphs were made with `ggplot2` package [@citeggplot].
+The analyses presented in this paper were conducted using R programming language [@citeR]. The `tidyverse` packages [@citetidyverse] were used in the process of data simulation, testing beforehand. After the original raw data was downloaded by using `tidyverse` package [@citetidyverse], data cleaning process was done by using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], and `arrow` package [@citearrow]. We use `testthat` package [@citetest] to develop the test for structure and format of simulation and analysis data. Then, models were constructed using `tidyverse` package [@citetidyverse], `lubridate` package [@citelubridate], `rstanarm` [@citerstanarm] package, and `splines` package [@citesplines]. The model results are then presented by `modelsummary` [@citemodelsummary] package, and graphs were made with `ggplot2` package [@citeggplot] and `RColorBrewer` package [@citercolorbrewer]. Tables were constructed with `knitr` package [@citeknitr].
 
+This analysis utilizes polling data from FiveThirtyEight [@fivethirtyeight], a reputable source renowned for its aggregation and analysis of political polls. The primary dataset encompasses national presidential election polls for the 2024 election cycle, detailing voter preferences across various surveys conducted by authoritative organizations.
+
+Although alternative datasets, such as those from Gallup and Ipsos, provide comparable national and state-level polling data, they were not included in this analysis for several reasons. The "poll-of-polls" methodology employed by FiveThirtyEight [@fivethirtyeight] enhances its reliability, and the selected pollsters are well-respected, further bolstering the dataset's credibility. Additionally, FiveThirtyEight [@fivethirtyeight] offers quality criteria variables that facilitate an evaluation of the data's reliability.
+
+Consequently, focusing on the FiveThirtyEight dataset allows us to leverage the most robust available information to derive meaningful insights regarding predictions for the 2024 presidential election.
 
 
 ## Measurement {#sec-data-measure}
 	
-Some paragraphs about how we go from a phenomena in the world to an entry in the dataset.
+To measure primary data, the raw polling data from FiveThirtyEight is structured to capture voter sentiment regarding the 2024 U.S. Presidential Election. Each dataset provides a snapshot of public opinion, transforming complex perceptions into quantifiable metrics, while compiling results from multiple polling organizations to present a comprehensive view of voter preferences.
 
-## Outcome variables {#sec-data-outcome}
+The datasets from FiveThirtyEight utilize a "poll-of-polls" methodology, which aggregates results from various polls conducted by different organizations. This aggregation minimizes biases and enhances the predictive accuracy of the findings, establishing FiveThirtyEight as a more reliable source for forecasting election outcomes compared to datasets derived from singular polling organizations. Furthermore, FiveThirtyEight offers extensive metadata for each poll, including detailed methodology and sample demographics, which are critical for evaluating the quality and representativeness of the data. This level of transparency, such as numeric grading, is not consistently available in other datasets, rendering FiveThirtyEight's offerings more suitable for rigorous analysis.
 
-Add graphs, tables and text. Use sub-sub-headings for each outcome variable or update the subheading to be singular.
+Polling methodologies encompass specific techniques for data collection, typically employing random sampling to accurately reflect the broader electorate, often supplemented by stratified sampling to ensure diverse demographic representation. Surveys are conducted using various methods, including telephone interviews, online surveys, and face-to-face interactions, with the mode of administration influencing participant selection and response behavior, ultimately impacting the results. The specific poll methodology will be further elaborated upon in the appendix, focusing on one of the pollsters.
 
 
-Plot basic relationship
+## Data Cleaning {#sec-data-cleaning}
 
+For the analysis in the paper, we derive two analysis datasets from the primary datasets which focus separately on national range and stage perspectives. Each entry in both datasets corresponds to a poll conducted by each pollster capturing the percentage of support for Donald Trump and number of days. To ensure the quality of data, we clean the data by only picking polls with numeric grades over 2.9. New variables are constructed for further analysis convenience. More details will be explored in appendix.
+
+
+## Outcome Variables {#sec-data-outcome}
+
+The outcome variable for this analysis is the support percentage for Donald Trump, represented as the pct variable in the datasets. This variable indicates the proportion of respondents who express support for Trump in various polls, providing a clear metric for evaluating his popularity over time as the 2024 U.S. Presidential Election approaches.
+
+To better understand the distribution of the outcome variables, visualizations and summary statistics are realized. We will only use the national level data to plot and build tables since the distribution and summary statistics of it in national level data and state data level are approximately similar.
+
+@fig-pct-dist is plotted to present the support percentage of Donald Trump. The x-axis represents the national support percentage of Donald Trump ranging from 30% to 60%, while the y-axis indicates the counts of polls that fall within each support percentage range. The histogram reveals a peak around 45% to 55%, suggesting a stable voter base, while the right-skewed pattern indicates a higher concentration of lower support percentages, with fewer polls reporting above 55%. Instances of outlier polls below 40% and above 55% reflect fluctuations in public opinion, potentially influenced by recent events and media coverage. The concentration of support suggests that Trump's backing may remain in the 45%-55% range as the election approaches; however, the presence of outlier polls indicates potential volatility, highlighting the need for ongoing analysis of polling data. Overall, the histogram provides critical insights into Trump's voter sentiment, emphasizing both the strength and variability of support leading into the election.
 
 ```{r}
 #| echo: false
@@ -92,13 +106,137 @@ trump_state_data <-
     )
 ```
 
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: fig-pct-dist
+#| fig-cap: "Support Percentage Distribution of Donald Trump"
+
+ggplot(trump_national_data, aes(x = pct)) + 
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black", alpha = 0.7) +
+  labs(x = "Support Percentage of Donald Trump",
+       y = "Counts of Polls") +
+  theme_minimal()
+```
 
 
-## Predictor variables {#sec-data-predictor}
+@tbl-national-pct presents summary statistics for Donald Trump's support percentage. The mean support percentage is approximately 46.4%, indicating that, on average, polls report a moderate level of backing for Trump. The median support percentage is 47%, suggesting that half of the polls report support below this value, reinforcing the stability of his voter base. The standard deviation of approximately 4.1% reflects a relatively small dispersion in support percentages across the dataset, indicating that most polls cluster closely around the mean. The minimum recorded support percentage is 29%, highlighting instances of lower confidence in Trump's support, while the maximum reaches 62%, illustrating moments of strong backing among certain voter segments. These statistics collectively suggest a generally stable but slightly variable support for Trump, which is critical for understanding the dynamics of his electoral appeal and for making informed predictions as the election date approaches.
 
-Add graphs, tables and text.
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-national-pct
 
-Use sub-sub-headings for each outcome variable and feel free to combine a few into one if they go together naturally.
+library(knitr)
+
+# Summary statistics for support percentage
+summary_stats <- trump_national_data %>%
+  summarise(
+    Mean = mean(pct, na.rm = TRUE),
+    Median = median(pct, na.rm = TRUE),
+    SD = sd(pct, na.rm = TRUE),
+    Min = min(pct, na.rm = TRUE),
+    Max = max(pct, na.rm = TRUE)
+  )
+
+# Create a table with kable
+kable(summary_stats, align = "ccc", caption = "Summary Statistics for Trump's Support Percentage")
+```
+
+
+## Predictor Variables {#sec-data-predictor}
+
+In this analysis, two key predictor variables are examined: the number of days since the start of the polling period, represented by end_date_num, and the state of the respondents, indicated by the state variable in the dataset. Understanding these variables is essential for interpreting their impact on Donald Trump’s support percentage and for making accurate predictions regarding the electoral outcome.
+
+
+### Number of Days {#sec-days-num}
+The variable end_date_num represents the number of days since a specified reference date, capturing the temporal aspect of polling data. This variable allows for analysis of how support for Trump may change as the election date approaches.
+
+We will also use the national level data to plot and construct table for number of days since the distribution and summary statistics of this variable in national level data and state data level are approximately similar.
+
+@fig-date-num illustrates the distribution of the number of days since the start of the polling period, represented by the end_date_num variable. The x-axis shows the number of days, while the y-axis displays the count of polls conducted. The distribution reveals several peaks, especially at the start of the polling period, indicating a higher concentration of polling activity soon after it began. Spikes in polling counts are notable at days 0, 30, and 60, suggesting that these intervals may align with key events or shifts in the political landscape that increased polling efforts. Numerous low-count bars throughout the histogram suggest consistent polling, albeit unevenly distributed across days. The overall distribution indicates active polling throughout the period leading up to the election, with frequency fluctuations likely driven by campaign events, debates, and major news. This analysis underscores the importance of timing in polling data when evaluating shifts in support for Trump.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: fig-date-num
+#| fig-cap: "Distribution of Days Since Polling Period Started"
+
+# Create a histogram of the number of days
+ggplot(trump_national_data, aes(x = end_date_num)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black", alpha = 0.7) +
+  labs(x = "Number of Days",
+       y = "Counts of Polls") +
+  theme_minimal()
+```
+
+
+As @tbl-date-num shown, the mean number of days is approximately 96.17, suggesting that, on average, polls were conducted about three months into the polling period. The median value is 99.5 days, indicating that half of the polls occurred after this point, reflecting a relatively consistent polling effort throughout the period. The standard deviation of approximately 48.41 days highlights some variability in the timing of the polls, with certain polls occurring significantly earlier or later than the average. The minimum value of 0 days indicates that some polls were conducted right at the start of the polling period, while the maximum value of 168 days reveals that polling continued well into the latter stages, possibly capturing shifts in voter sentiment as the election date approached. Overall, these summary statistics suggest a sustained and varied polling effort over time, emphasizing the importance of considering the timing of each poll in the context of electoral events and public opinion trends as the election nears. This temporal analysis will be critical in understanding how support for Trump evolves leading up to the election.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-date-num
+
+# Summary statistics for end_date_num
+summary_stats_days <- trump_national_data %>%
+  summarise(
+    Mean = mean(end_date_num, na.rm = TRUE),
+    Median = median(end_date_num, na.rm = TRUE),
+    SD = sd(end_date_num, na.rm = TRUE),
+    Min = min(end_date_num, na.rm = TRUE),
+    Max = max(end_date_num, na.rm = TRUE)
+  )
+
+# Create a table with kable
+kable(summary_stats_days, align = "ccc", caption = "Summary Statistics of Days Since Polling Period Started")
+```
+
+
+### State {#sec-state}
+
+The state variable categorizes polling data by geographic location, providing a critical dimension for analysis. This variable allows for exploration of regional variations in support for Trump, which is crucial for understanding the electoral landscape.
+
+@fig-state illustrates the distribution of polling counts for Donald Trump across different states leading up to the 2024 U.S. Presidential Election in a bar chart. The x-axis represents individual states, while the y-axis shows the number of polls conducted per state. The chart indicates significant differences in polling activity, with states such as California, Florida, and Michigan having the highest counts, emphasizing their status as crucial battlegrounds with high voter interest and engagement. Notably, Michigan's high poll count points to a concerted effort to track voter sentiment in this key state. In contrast, states like Montana and Nebraska CD-2 show much lower polling counts, potentially due to less electoral competitiveness or limited polling resources. This distribution highlights geographic disparities in polling, showcasing where voter sentiment is closely monitored. Understanding these disparities is essential for analyzing Trump’s support dynamics and anticipating electoral strategies as the election nears. The variation in polling frequency also implies that states with more polling might witness more pronounced shifts in voter sentiment, impacting campaign tactics and outreach initiatives.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: fig-state
+#| fig-cap: "Counts of Polls by State"
+
+# Create a bar chart of counts by state
+ggplot(trump_state_data, aes(x = state)) +
+  geom_bar(fill = "lightgreen", color = "black") +
+  labs(x = "State",
+       y = "Counts of Polls") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+The summary statistics table, @tbl-state, outlines the counts of polling activity for Donald Trump across various states leading up to the 2024 U.S. Presidential Election. Pennsylvania, with 51 polls, leads in polling activity, signaling a strong focus on this key battleground. Wisconsin follows with 44 counts, further emphasizing its importance in the election landscape. Arizona (36 counts) and Michigan (29 counts) also show significant polling, underlining their competitive nature and strategic relevance. States like North Carolina (22 counts) and Nevada (16 counts) show moderate interest, suggesting they are important but not as heavily contested as leading states. On the other hand, states such as Montana, Maryland, Missouri, and New Hampshire have notably low polling activity, with only 4 to 6 counts each, indicating potentially less competitive dynamics or fewer allocated resources. This table underscores geographic disparities in polling efforts, key for understanding where campaign strategies may focus and how voter sentiment might shift in critical states. The counts pinpoint battlegrounds that could decisively influence the election, highlighting the importance of targeted campaign activities in states with higher polling frequencies.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-state
+
+# Summary of polls by state
+state_summary <- trump_state_data %>%
+  group_by(state) %>%
+  summarise(Counts = n()) %>%
+  arrange(desc(Counts))
+
+# Create a table with kable
+kable(state_summary, align = "ccc", caption = "Summary Statistics of State")
+```
 
 
 
@@ -353,10 +491,9 @@ The blue line drawn through the scatter points in each plot in @fig-model2result
 #| fig-cap: "Predict Posterior Draws and Spline Fit for Vote Percentage in Each State"
 #| warning: false
 
-# Change 'pollster' and 'state' to factor variables
+# Change 'state' to factor variables
 trump_state_data <- trump_state_data |>
   mutate(
-    pollster = factor(pollster),
     state = factor(state)
   )
 
@@ -481,39 +618,42 @@ Last but not least, evaluations on the possible reasons behind the trends of the
 
 ## Background of Emerson College Polling
 
-Emerson College Polling is a famous U.S. polling organization as known for its precise and timely predictions, particularly in political forecasting such as the U.S, election. Emerson uses multiple methods approach, combining both traditional and modern techniques to capture a representative outcome of the election. Emerson College uses a mix of landline calls, text-to-web links, and online panel surveys to reach a broad range of people. This approach helps them collect decisions from a diverse group of likely voters.
+Emerson College Polling is a famous U.S. polling organization as known for its precise and timely predictions, particularly in political forecasting such as the U.S, election. Emerson uses multiple methods approach, combining both traditional and modern techniques to capture a representative outcome of the election [@emerson_method]. Emerson College uses a mix of landline calls, text-to-web links, and online panel surveys to reach a broad range of people. This approach helps them collect decisions from a diverse group of likely voters. In mid-October 2024, Emerson College Polling surveyed 1,000 likely U.S. voters to assess voter preferences for the upcoming presidential election. The poll results showed a competitive race, with Kamala Harris at 49% and Donald Trump closely following at 48%, reflecting a near split among voters [@emersonpolling2]. Following appendix provides a detailed breakdown of ECP’s methodology for this poll.
 
 
 ## Population, Frame, and Sample
 
+In polling, population, frame, and sample are basic concepts that determine the accuracy and reliability of the outcomes. An accurately defined population ensures the poll’s focus, a robust frame prevents undercoverage, and a well-selected sample reduces bias, providing a clear representation of public thinking [@ScienceDirect2023]. The more closely a sample resembles the actual population, the more reliable the conclusions drawn from it will be [@Illinois2023].
+
 1. Population: 
-Emerson’s target population consists of likely U.S. voters, determined based on their past voting records, registration status, and stated intention to vote. For their 2024 surveys, they specifically target people who most likely to participate in upcoming elections, making adjustments to closely model the anticipated voter’s tendency
+The population in a poll is the complete group whose opinions the poll seeks to understand [@Illinois2023]. For election polling, this group often includes all eligible or likely voters in a region or demographic segment. Emerson’s target population consists of likely U.S. voters, determined based on their past voting records, registration status, and stated intention to vote [@emersonpolling2]. For their 2024 surveys, they specifically target people who most likely to participate in upcoming elections, making adjustments to closely model the anticipated voter’s tendency
 
 2. Frame: 
-Emerson’s sampling frame includes U.S. census parameters, voter registration and exit polls(pre validated online panels). These lists are accurate to reflect key demographics, such as age, gender, race, education, and geographic region. By using stratified sampling and comprehensive voter files, Emerson ensures broad coverage across significant voting populations, including those who might hard to reach, such as rural or younger voters
+The sampling frame is the actual list or database used to draw a sample from the population. It should ideally include all individuals in the population so each has a chance of selection [@AAPOR2022]. A well-designed frame minimizes "coverage error," which occurs when parts of the population are excluded from the frame, thereby reducing bias. Emerson’s sampling frame consists of U.S. Census data, voter registration files, and pre-validated online panels. This frame is carefully stratified by demographics like age, race, gender, education, and region to ensure that all key groups are included, especially hard to reach populations such as rural or younger voters
 https://emersoncollegepolling.com/october-2024-national-poll-harris-50-trump-48/
 
 3. Sample: 
-Emerson College uses stratified sampling in their methodology to set quotas that match the actual demographic breakdown of the U.S. electorate. They use a combination of probability and non-probability sampling techniques, primarily from an online panel, MMS-to-web(text-to-web) surveys, and landline calls via Interactive Voice Response (IVR). For example, their sample size for national surveys typically consists of 1,000 likely voters, with each sample calibrated to reflect key demographic features.
+The sample is the group of individuals selected from the frame to participate in the poll [@ScienceDirect2023]. It represents the population in a smaller form, allowing pollsters to draw conclusions without surveying every person [@AAPOR2022]. While large sample sizes can increase a poll's statistical precision, accuracy can still be compromised by biases from poorly crafted questions, flawed data collection, or improper analysis. Beyond roughly 1,000 respondents, the sample’s quality and selection methods are often more important than sheer size [@SciLine2023]. Emerson uses stratified sampling to set quotas that match the demographic composition of the U.S. electorate [@emersonpolling1], which helps ensure that the sample reflects key population characteristics. They gather responses through a combination of probability and non-probability sampling methods, including online panels, text-to-web (MMS-to-web) surveys, and landline IVR calls. For national polls, Emerson typically samples about 1,000 respondents and then weights the data to further align with U.S. demographic distributions, reducing sampling error and improving accuracy.
+
 
 
 ## Sample Recruitment Methods
 
 1. Cell Phone MSS-to-Web: 
-Emerson applies a text-to-web approach, sending potential respondents a survey link through MMS, this method is especially effective in reaching younger or mobile-first voters, they are more likely to response by one click rather than receiving an half-hour long call.
+Emerson applies a text-to-web approach [@emerson_method], sending potential respondents a survey link through MMS, this method is especially effective in reaching younger or mobile-first voters, they are more likely to response by one click rather than receiving an half-hour long call.
 
 2. Landline IVR: 
-IVR calls are used to reach older demographics or rural population who may be less engaged online or not familiar with new generation technology. The traditional method such as the landline calls are easier to accepted by them, and increases response rates among older adults and those in rural areas, which ensuring balanced representation across age groups.
+IVR calls are used to reach older demographics or rural population [@emerson_method] who may be less engaged online or not familiar with new generation technology. The traditional method such as the landline calls are easier to accepted by them, and increases response rates among older adults and those in rural areas, which ensuring balanced representation across age groups.
 
 3. Online Panels: 
-Emerson also utilizes verified online panels, where respondents’ eligibility is cross-checked with voter file data, in order to exclude not potential voter’s response, this step reinforces sample accuracy.
+Emerson also utilizes verified online panels [@emerson_method], where respondents’ eligibility is cross-checked with voter file data, in order to exclude not potential voter’s response, this step reinforces sample accuracy.
 
 These recruitment methods help Emerson reach a wide audience, though self-selection bias may arise, particularly with online panel participants, as individuals joining these panels are often more politically engaged.
 
 
 ## Sampling Approach’s Trade-offs
 
-Emerson’s sampling approach uses stratification to set quotas based on demographic factors, such as age, race, gender, education, and location. Post-stratification weighting further adjusts these quotas to align the sample with Census and voter registration data.
+Emerson’s sampling approach uses stratification to set quotas based on demographic factors [@emerson_sept2024_swingstate], such as age, race, gender, education, and location. Post-stratification weighting further adjusts these quotas to align the sample with Census and voter registration data.
 
 
 ### Advantages
@@ -531,7 +671,7 @@ Using text-to-web and online panels allows a quick receiving of the answers, for
 ### Disadvantages
 
 1. Non-Probability Limitations: 
-Non-probability sampling means not all individuals have an equal chance of being selected, in some of Emerson’s methods such as landline call, targeted people are not randomly choose, which can increase potential bias.
+Non-probability sampling means not all individuals have an equal chance of being selected, in some of Emerson’s methods such as landline call, also known as robopolls or interactive voice response calls, are cost-effective but typically only reach landline users, the focus on landlines limits the diversity of respondents, impacting the sample's representativeness [@SciLine2023].
 
 2. Access Bias: 
 Voters without internet or mobile access may be underrepresented, particularly among lower-income or rural demographics, which can increase the incomplete representation bias.
@@ -539,7 +679,7 @@ Voters without internet or mobile access may be underrepresented, particularly a
 
 ## Handling Non-Response
 
-To address non-response bias, Emerson applies demographic weighting to underrepresented groups, such as younger voters or certain racial demographics, they put more weight for these groups. 
+To address non-response bias, Emerson applies demographic weighting to underrepresented groups [@emersonpolling2], such as younger voters or certain racial demographics, they put more weight for these groups. 
 Emerson occasionally provides incentives to respondents, which encourages survey completion. This is especially effective in boosting participation rates for online panel members, who may be less likely to complete surveys without additional motivation. However, people with lower political engagement levels may still be less likely to respond, which could impact representativeness.
 
 
@@ -548,7 +688,7 @@ Emerson occasionally provides incentives to respondents, which encourages survey
 ### Advantages
 
 1. Clarity and Style of Question: 
-Emerson focuses on straightforward, unbiased questions to ensure respondents understand each item consistently, closed-ended questions make voters are easy to give the answer without too much thinking, which decrease the drops-out.
+Emerson focuses on straightforward, unbiased questions to ensure respondents understand each item consistently [@emerson_data], closed-ended questions make voters are easy to give the answer without too much thinking, which decrease the drops-out.
 
 2. Relevance and Adaptability: 
 Questions are updated regularly to reflect current political events, enhancing the survey’s relevance and accuracy.
@@ -557,10 +697,10 @@ Questions are updated regularly to reflect current political events, enhancing t
 ### Disadvantages
 
 1. Simplicity: 
-Online surveys typically rely on multiple-choice or straightforward questions, which may limit deeper insights into complex opinions or voter’s tendency. 
+Online surveys typically rely on multiple-choice or straightforward questions [@emerson_data], which may limit deeper insights into complex opinions or voter’s tendency. 
 
 2. Question Order Bias: 
-The order of questions presented can unintentionally influence voter responses. For example, asking participants to rate their favorability towards Kamala Harris before asking about other candidates could mislead respondents, subtly framing how they perceive subsequent individuals. This can lead to "order effects," in polls, order effects can create a bias, especially if the initial question involves a polarizing candidate, it may cause strong emotions that influence answers to following questions.
+The order of questions presented can unintentionally influence voter responses [@SciLine2023]. For example, asking participants to rate their favorability towards Kamala Harris before asking about other candidates [@emerson_data] could mislead respondents, subtly framing how they perceive subsequent individuals. This can lead to "order effects," in polls, order effects can create a bias, especially if the initial question involves a polarizing candidate, it may cause strong emotions that influence answers to following questions.
 
 3. Potential Response Fatigue: 
 Frequent participation in polls may lead to rushed responses, impacting quality.
@@ -587,8 +727,7 @@ The target population consists of U.S. registered voters eligible to vote in the
 
 ### Sampling Frame
 
-To build a representative sampling frame, recent national voter registration data from reliable sources, such as the U.S. Election Assistance Commission, will serve as the foundation. This data will be enhanced by voter profile databases from third-party aggregators like Catalist, which consolidate demographic, geographic, and political affiliation data. To ensure the sample reflects the diversity of the U.S. electorate, quotas will be set based on demographic data from the U.S. Census and Bureau of Labor Statistics, including age, race, gender, income, and urban-rural distribution.
-
+To build a representative sampling frame, recent national voter registration data from reliable sources, such as the U.S. Election Assistance Commission, will serve as the foundation. This data will be enhanced by voter profile databases from third-party aggregators like Catalist, which consolidate demographic, geographic, and political affiliation data. 'Survey Methodology' (@groves2011survey) discusses how stratified sampling can increase the efficiency of survey estimates by dividing the population into subgroups and sampling each group independently. Thus, to ensure the sample reflects the diversity of the U.S. electorate, quotas will be set based on demographic data from the U.S. Census and Bureau of Labor Statistics, including age, race, gender, income, and urban-rural distribution. 
 
 
 ### Sample Size
@@ -596,9 +735,12 @@ To build a representative sampling frame, recent national voter registration dat
 We will take a sample of at least 3,000 respondents to balance statistical accuracy with budget constraints.
 
 
+
 ### Stratified Random Sampling
 
-To achieve the goal of accurate and representative sample, we will apply stratified random sampling by using key demographic categories to divide the sample into strata that reflect the U.S. voting population’s diversity. Stratify as followed:
+Stratified random sampling enhances the accuracy of survey estimates because it ensures proportional representation of different demographic groups. This minimizes the risk of sampling bias, where certain groups may be overrepresented or underrepresented, skewing the results. 
+
+Hence, to achieve a representative sample, stratified random sampling will be employed. This method involves dividing the population into homogeneous subgroups based on key demographic characteristics, then randomly selecting samples from each stratum proportionate to its size in the population. The strata will include:
 
 - Age: Use age brackets (18-29, 30-44, 45-64, 65+) based on voter turnout trends, as younger age groups are often underrepresented.
 
@@ -610,12 +752,12 @@ To achieve the goal of accurate and representative sample, we will apply stratif
 
 - Political Affiliation: Where available, include political party affiliation, such as Democrat, Republican and Independent, to account for differing levels of partisan engagement.
 
-Within the division, we will randomly select respondents within each stratum to match the proportions of these demographic categories in the general population.
+Within the division, we will randomly select respondents within each stratum to match the proportions of these demographic categories in the general population. Our stratified random sampling works by first dividing the entire population into subgroups, or strata, based on specific characteristics relevant to the research, such as age, gender, or political affiliation. Once these strata are defined, random samples are drawn independently from each subgroup, ensuring that each is proportionally represented according to its size in the overall population or adjusted for adequate representation of smaller yet important groups. These samples are then combined to form the complete sample, ensuring that all significant subgroups are included. This approach reduces sampling variability, improves representation, and allows for more precise estimates compared to simple random sampling, as each subgroup’s characteristics are accurately reflected in the final sample.
 
 
 ### Trade-offs
 
-This approach minimizes bias but can be costly due to increased recruitment needs in underrepresented groups. Random sampling may also limit the ability to reach specific subsets of voters.
+This approach minimizes bias but can be costly due to increased recruitment needs in underrepresented groups as mentioned in 'The Total Survey Error Approach' (@weisberg2009total). Random sampling may also limit the ability to reach specific subsets of voters.
 
 
 ## Data Validation
@@ -631,7 +773,7 @@ As data quality is imperative to reach a reliable prediction, we will apply the 
 
 ## Poll Aggregation Methodology
 
-We will pick the poll-of-polls approach aggregates results from multiple polling sources to produce a more stable and representative forecast of the U.S. presidential election. This method helps to mitigate individual poll biases, smooth out fluctuations, and capture a broader picture of voter sentiment. Polls will be weighted by the following factors:
+We will pick the poll-of-polls approach aggregates results from multiple polling sources to produce a more stable and representative forecast of the U.S. presidential election. 'Polling and the Public' (@asher2016polling) outlines the benefits of weighted poll aggregation and the importance of outlier detection. Outlier detection ensures that any poll results significantly different from others are reviewed to determine if they reflect genuine public opinion or anomalies due to errors or biased sampling. This process prevents these outliers from disproportionately influencing the overall forecast. Accordingly, this method helps to mitigate individual poll biases, smooth out fluctuations, and capture a broader picture of voter sentiment. Polls will be weighted by the following factors:
 
 - Sample Size: Larger sample size polls will receive greater weight to reflect their higher statistical reliability.
 
@@ -878,6 +1020,14 @@ This methodology leverages stratified random sampling and poll-of-polls aggregat
 ### Weaknesses
 
 Limitations include potential sampling and non-response bias, as underrepresented groups and undecided voters may be difficult to capture. Additionally, reliance on self-reported data and aggregated poll results introduces variability, while temporal limitations may impact accuracy close to Election Day. The forecast provides a likely outcome range but cannot fully account for unexpected events or behavioral shifts.
+
+
+# Additional Data Cleaning details {#sec-cleaning-details}
+The data cleaning process involves several critical steps to ensure that the dataset is suitable for analysis and accurately reflects voter sentiment regarding the 2024 U.S. Presidential Election. Below is a detailed description of the cleaning operations performed on the raw polling data.
+
+The dataset is filtered to retain only those polls conducted by high-quality pollsters, defined by a numeric grade of 2.9 or higher. Additionally, only polls for the target candidate, Donald Trump or Donald Trump Jr., are included. The `end_date` variable, which represents when each poll was completed, is converted from character format to date format using the `mdy` function from the `lubridate` package. To focus on relevant data, the dataset is further filtered to include only those polls conducted within six months before the election date (after May 5, 2024). Afterwards, only the necessary columns for analysis are retained, including `end_date`, `sample_size`, `state`, and `pct`. Then, a new variable, `end_date_num`, is created to represent the number of days since the minimum end date in the dataset. This numeric format allows for easier modeling. For certain models, it is necessary to convert the percentage of votes (`pct`) into actual vote counts. A new variable, `num_vote`, is calculated by multiplying the percentage by the sample size and rounding to the nearest integer. Finally, any remaining missing values are removed from the dataset to ensure that the data is clean and complete for subsequent analysis.
+
+These cleaning steps ensure that the dataset is robust, consistent, and ready for analysis, ultimately providing a solid foundation for modeling voter preferences in the 2024 U.S. Presidential Election.
 
 
 
