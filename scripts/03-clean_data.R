@@ -41,7 +41,5 @@ state_data <-
 
 
 #### Save data ####
-write_csv(national_data, "data/02-analysis_data/trump_national_data.csv")
-write_csv(state_data, "data/02-analysis_data/trump_state_data.csv")
 write_parquet(national_data, "data/02-analysis_data/trump_national_data.parquet")
 write_parquet(state_data, "data/02-analysis_data/trump_state_data.parquet")
