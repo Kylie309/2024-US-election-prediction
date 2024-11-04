@@ -1,89 +1,66 @@
 #### Preamble ####
-# Purpose: Tests the structure and validity of the simulated Australian 
-  #electoral divisions dataset.
-# Author: Rohan Alexander
-# Date: 26 September 2024
-# Contact: rohan.alexander@utoronto.ca
+# Purpose: Tests the structure and format of election simulation data
+# Author: Yunkai Gu & Anqi Xu & Yitong Wang
+# Date: 4 November 2024
+# Contact: kylie.gu@mail.utoronto.ca & anjojoo.xu@mail.utoronto.ca & stevenn.wang@mail.utoronto.ca
 # License: MIT
 # Pre-requisites: 
-  # - The `tidyverse` package must be installed and loaded
-  # - 00-simulate_data.R must have been run
-# Any other information needed? Make sure you are in the `starter_folder` rproj
+# - The `tidyverse` `testthat` `arrow` package must be installed and loaded
+# - 00-simulate_data.R must have been run
+
 
 
 #### Workspace setup ####
 library(tidyverse)
+library(testthat)
+library(arrow)
 
-analysis_data <- read_csv("data/00-simulated_data/simulated_data.csv")
-
-# Test if the data was successfully loaded
-if (exists("analysis_data")) {
-  message("Test Passed: The dataset was successfully loaded.")
-} else {
-  stop("Test Failed: The dataset could not be loaded.")
-}
+election_data <- read_parquet("data/00-simulated_data/poll_simulated_data.parquet")
 
 
 #### Test data ####
+test_that("simulated data structure is correct", {
+  # Test if 'election_data' exists and is a tibble
+  expect_true(is_tibble(election_data))
+})
 
-# Check if the dataset has 151 rows
-if (nrow(analysis_data) == 151) {
-  message("Test Passed: The dataset has 151 rows.")
-} else {
-  stop("Test Failed: The dataset does not have 151 rows.")
-}
+test_that("all required columns are present", {
+  # Test whether all required columns are present
+  required_columns <- c("end_date", "sample_size", "state", 
+                        "pct", "end_date_num", "num_vote")
+  expect_true(all(required_columns %in% colnames(election_data)))
+})
 
-# Check if the dataset has 3 columns
-if (ncol(analysis_data) == 3) {
-  message("Test Passed: The dataset has 3 columns.")
-} else {
-  stop("Test Failed: The dataset does not have 3 columns.")
-}
+test_that("simulated data columns have correct format", {
+  # Check if each column has the correct data type
+  expect_true(is.Date(as.Date(election_data$end_date)))  # Convert to Date if necessary
+  expect_true(is.numeric(election_data$sample_size))
+  expect_true(is.character(election_data$state))
+  expect_true(is.numeric(election_data$pct))
+  expect_true(is.numeric(election_data$end_date_num))
+  expect_true(is.numeric(election_data$num_vote))
+})
 
-# Check if all values in the 'division' column are unique
-if (n_distinct(analysis_data$division) == nrow(analysis_data)) {
-  message("Test Passed: All values in 'division' are unique.")
-} else {
-  stop("Test Failed: The 'division' column contains duplicate values.")
-}
 
-# Check if the 'state' column contains only valid Australian state names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", 
-                  "Western Australia", "Tasmania", "Northern Territory", 
-                  "Australian Capital Territory")
+test_that("end_date column is within proper range", {
+  # Test if all 'end_date' values are between May 8, 2024, and Oct 22, 2024
+  expect_true(all(as.Date(election_data$end_date) >= as.Date("2024-05-08") &
+                    as.Date(election_data$end_date) <= as.Date("2024-10-22")))
+})
 
-if (all(analysis_data$state %in% valid_states)) {
-  message("Test Passed: The 'state' column contains only valid Australian state names.")
-} else {
-  stop("Test Failed: The 'state' column contains invalid state names.")
-}
+test_that("end_date_num values are calculated correctly", {
+  # Test whether 'end_date_num' corresponds correctly to 'end_date' minus May 7, 2024
+  calculated_end_date_num <- as.numeric(as.Date(election_data$end_date) - as.Date("2024-05-07"))
+  expect_equal(election_data$end_date_num, calculated_end_date_num)
+})
 
-# Check if the 'party' column contains only valid party names
-valid_parties <- c("Labor", "Liberal", "Greens", "National", "Other")
-
-if (all(analysis_data$party %in% valid_parties)) {
-  message("Test Passed: The 'party' column contains only valid party names.")
-} else {
-  stop("Test Failed: The 'party' column contains invalid party names.")
-}
-
-# Check if there are any missing values in the dataset
-if (all(!is.na(analysis_data))) {
-  message("Test Passed: The dataset contains no missing values.")
-} else {
-  stop("Test Failed: The dataset contains missing values.")
-}
-
-# Check if there are no empty strings in 'division', 'state', and 'party' columns
-if (all(analysis_data$division != "" & analysis_data$state != "" & analysis_data$party != "")) {
-  message("Test Passed: There are no empty strings in 'division', 'state', or 'party'.")
-} else {
-  stop("Test Failed: There are empty strings in one or more columns.")
-}
-
-# Check if the 'party' column has at least two unique values
-if (n_distinct(analysis_data$party) >= 2) {
-  message("Test Passed: The 'party' column contains at least two unique values.")
-} else {
-  stop("Test Failed: The 'party' column contains less than two unique values.")
-}
+test_that("state values are valid", {
+  # Test if 'state' values are within the provided state list
+  valid_states <- c("Pennsylvania", "North Carolina", "Wisconsin", 
+                    "South Dakota", "Georgia", "Arizona", "Maryland", 
+                    "Texas", "Florida", "California", "New Hampshire", 
+                    "Michigan", "Nevada", "Montana", "Ohio", "Massachusetts", 
+                    "Nebraska CD-2", "New York", "Virginia", "Missouri", 
+                    "Indiana", "New Mexico", "Minnesota")
+  expect_true(all(election_data$state %in% valid_states))
+})
